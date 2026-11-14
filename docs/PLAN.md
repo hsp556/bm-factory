@@ -5,7 +5,7 @@ This file says what we do, in what order, on which machine, and how we know each
 - How we build (setup, agent team, rules): `docs/BUILD.md`
 - Detailed task plans: `docs/plans/` (one per phase, written with the `writing-plans` skill when the phase starts)
 
-**Status (2026-11-14):** Phase 0 plan written. Waiting for approval of the first commit and of O4 (code repository).
+**Status (2026-11-14):** Phase 0 steps 0.4 and 0.5 (build half) are done: Tasks 1-5 built, reviewed and final-reviewed; 384 tests pass, 1 live test skipped. Merged to `main` and pushed to the private GitHub repo (O4 decided). **Order set by the user:** System 3 comes first (setup 0.2, inspector run, supervised walk through the desktop app) so the real codes and screens are known; the Claude intake plan (`docs/plans/2026-11-14-phase-0b-claude-intake.md`) is written and plan-reviewed but waits until after that walk-through.
 
 Machine key: 💻 dev PC · 🖥️ System 3 (via Iperius) · ☁️ AWS · 👤 a person
 
@@ -23,10 +23,34 @@ Detailed plan: `docs/plans/2026-11-14-phase-0-foundations.md`
 | 0.5 | Build Task 5 (read-only UI inspector and coverage report) | 💻 → 🖥️ | Subagents | Unit tests green on 💻; live run on 🖥️ produces `docs/discovery/` |
 | 0.6 | Run the inspector on the Capitaline main window and the TP Screener (Domain, Filters, Output tabs opened by hand) | 🖥️ | 👤 opens the screens, the inspector records | `docs/discovery/capitaline-feasibility.md` lists each target as green/amber/red |
 | 0.7 | **Supervised learning run:** Claude on System 3 walks SKILL §3D for L1 on the golden job while a TP manager watches through Iperius | 🖥️ | Claude + 👤 TP manager | Screen map v1 PR with real labels; Save/Load Screener and Import Peerset results noted |
-| 0.8 | Decide **O2** (Claude route: Anthropic API, Claude Platform on AWS or Bedrock) | — | 👤 You + IT | Recorded as a decision in ARCHITECTURE.md |
+| 0.8 | Claude route: **decided, direct Anthropic API** (D9). Set `ANTHROPIC_API_KEY` as an environment variable on the dev PC and System 3 | — | 👤 You | Key set; never in chat or files |
 | 0.9 | IT: Entra app registration with Graph `Sites.Selected` on the SharePoint **test** folder | — | 👤 IT | A test upload from System 3 works |
 | 0.10 | Start recording ~40 voice commands (for the Phase 3 bake-off) | — | 👤 You | Stored in a restricted folder |
 | **Gate** | 👤 Review the Phase 0 results and approve the move to Phase 1 | | | |
+
+### Carried into Phase 1 from the Phase 0 reviews
+Driver and uploader requirements the reviewers set; the Phase 1 plan must include each one.
+- **Save path:** the driver owns the landing-folder template (not the YAML), confines the resolved path to the landing root, and verifies the file landed. One `raw_dump_name()` function serves both the step list and the manifest; `{field}` is `[A-Za-z0-9]` only.
+- **Placeholders:** fixed allowlist, strict substitution (never `str.format`), fail on an unknown placeholder, re-check the text after filling.
+- **Windows:** every window must belong to the single Capitaline process (executable + PID), plus a title allowlist. The Save As dialog must be owned by that process.
+- **Screenshots:** capture the Capitaline window only, never the whole desktop. The engine takes one before every click and writes one evidence-log row per action.
+- **Screen map:** `verified: false` blocks live runs; a learning-run rewrite resets it to false.
+- **Uploader:** the test/production root allowlist for `Job.dest` is the first uploader task; SharePoint tenant allowlist from config.
+- **Contracts tidy-up:** public `contracts/text.py`; reserved names in `Job.dest`; a "complete" manifest must list files; patterns in exported schemas before the PWA or TAIGA use them; models for `counts.json` and `run-record.json`; `command.json` must keep the raw text and which values were defaulted.
+- **Free-text leniency (with the free-text reader):** thousands separators, `Mode: strategy only`, `Industry: 6201`, empty optional values, Indian-script joiner characters.
+
+### Questions for you / the TP manager (working choice in brackets)
+1. RunID format `CAP-FY2526-LIB-20261114-01` (D6). [in use]
+2. Default FY switches on 1 April. [yes]
+3. Tested party defaults to "service" when not stated. [yes]
+4. Export file name with a sequence number, as Cap-SOP, or without, as SKILL §3D? [with]
+5. Is there a Parse button on the desktop screener? [step included, unverified]
+6. Domain: all companies (Cap-SOP) or ticked industries (SKILL §3D), per layer? [strategy supplies it]
+7. Who names the export file: the watcher or the bot? [bot types the full name]
+8. How is the screener CSV saved? [Save button then Save As, unverified]
+9. Client short names are cut at 30 characters. [yes]
+10. Region: decided 2026-11-14, not an input for Capitaline (India only; D10).
+11. Track `SKILL (9).md` and `BM-Chats (2).md` in the private repo? [recommended]
 
 ## Phase 1: Station Core + S3 tracer (one layer, end to end)
 Where: 💻 for the core, 🖥️ for the Capitaline adapter and live tests.

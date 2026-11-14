@@ -16,7 +16,7 @@ Both machines (Git Bash):
 ```bash
 git clone <repo-url> "capitaline agent" && cd "capitaline agent"
 python -m venv .venv
-.venv/Scripts/python -m pip install -e ".[dev]"          # 🖥️ System 3 also adds: -e ".[dev,station]"
+.venv/Scripts/python -m pip install -e ".[dev]" -c constraints.txt   # 🖥️ System 3: -e ".[dev,station]" -c constraints.txt
 .venv/Scripts/python -m pytest                            # must be green before any work
 ```
 
@@ -63,7 +63,7 @@ The security reviewer joins whenever a diff touches credentials, Graph, job inta
 
 ## 5. How to run a phase (what you type in Claude Code)
 1. `Use writing-plans to write the Phase N plan from docs/PLAN.md and docs/ARCHITECTURE.md`. The plan is saved in `docs/plans/`.
-2. 👤 Review the plan.
+2. **Plan review before any code** (added after Phase 0, where 6 of 8 first-review findings were plan gaps): dispatch `tp-sop-reviewer` and `security-licence-reviewer` on the plan file itself. The SOP reviewer checks every procedure step against **both** `SKILL (9).md` and `docs/source/Cap-SOP.txt`. Fix the plan, then 👤 review it.
 3. `Execute docs/plans/<plan>.md with subagent-driven-development`.
 4. Tasks marked 🖥️: open Claude Code **on System 3** (via Iperius), `git pull`, then run the same command for those tasks.
 5. 👤 Phase gate → merge the branch.
@@ -83,6 +83,16 @@ The security reviewer joins whenever a diff touches credentials, Graph, job inta
 - All applicable reviewers passed, or every open finding is parked with a ruling in the ledger.
 - For 🖥️ tasks, the live check ran on System 3 and the evidence (output or screenshot) is linked in the report.
 - No new dependency outside the plan's Global Constraints.
+
+## 8a. Input rules every plan must carry in its Global Constraints
+Anything read from a person, a file, SharePoint, the screen or Claude is untrusted. State these in the plan so each task starts with them:
+- Free text: maximum length set, control and format characters rejected.
+- Patterns: `fullmatch`, ASCII digit classes; never `$` or `\d` on untrusted text.
+- Paths: relative, no `..`, no drive or scheme, Windows reserved names rejected, confined to a named root.
+- URLs: `https`, host allowlist checked on the raw host, no userinfo or port.
+- Models: unknown fields rejected (`extra="forbid"`), list sizes capped.
+- Error messages: echoed input truncated to 50 characters.
+- Screen reads: record structure, not database content; raw captures go to a git-ignored folder.
 
 ## 9. Secrets
 - Secrets come from environment variables or Windows Credential Manager only. Never from code, YAML, tests or logs.

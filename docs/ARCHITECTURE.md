@@ -13,12 +13,13 @@ Status: v0.1, 2026-11-14. The source procedure is `SKILL (9).md`, `BM-Chats (2).
 | D6 | RunID FY token = `FY` + 2+2 digits, e.g. `CAP-FY2526-LIB-20261114-01`. This is a ruling: the SOP leaves the FY format open, and a hyphenated FY would break splitting on `-`. | 2026-11-14 (confirm) |
 | D7 | The Capitaline seat on System 3 is licensed and stays logged in. The user confirmed the licence position, so the bot never handles sign-in. | 2026-11-14 |
 | D8 | Development access to System 3 is through **Iperius Remote**, which shares the console session. Production needs no remote access, because stations call out to the Command Centre. | 2026-11-14 |
+| D9 | Claude is reached through the **direct Anthropic API** (was O2). All calls go through one small interface (`LLMClient`), so the route can be swapped later. Computer use for rescue and learning runs uses the same route. | 2026-11-14 |
+| D10 | **No region input for Capitaline.** Capitaline covers Indian companies only, so region is fixed. Region may become an input for stations with global data (for example Compustat). | 2026-11-14 |
 
 ## 2. Open decisions
 | # | Question | Options | Decide by |
 |---|---|---|---|
 | O1 | Speech-to-text provider | ElevenLabs Scribe vs Sarvam Saaras. Choose by a bake-off on recorded partner commands (§6) | Phase 3 |
-| O2 | Claude access route | Anthropic API direct vs Claude Platform on AWS vs Amazon Bedrock. Check data terms and that computer use is supported on the chosen route | Phase 0 |
 | O3 | Command Centre runtime on AWS | One EC2 with Docker Compose (matches TAIGA ops) vs ECS | Phase 3 |
 | O4 | Shared code repository, needed by both this dev PC and System 3 | Private GitHub repo (recommended) vs Azure DevOps vs a self-hosted git on AWS | Before Task 5 |
 
