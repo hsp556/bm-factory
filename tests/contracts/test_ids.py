@@ -1,0 +1,45 @@
+from datetime import date
+
+import pytest
+
+from bmfactory.contracts.ids import (
+    current_compliance_fy,
+    make_run_id,
+    normalise_fy,
+    parse_run_id,
+    slugify_client,
+    year_codes,
+)
+
+
+@pytest.mark.parametrize("raw", ["2025-26", "FY 2025-26", "FY25-26", "25-26", "2025-2026", " fy2025-26 "])
+def test_normalise_fy_variants(raw): assert normalise_fy(raw) == "2025-26"
+
+@pytest.mark.parametrize("bad", ["2025-27", "2025", "FY", "26-25", ""])
+def test_normalise_fy_rejects(bad):
+    with pytest.raises(ValueError): normalise_fy(bad)
+
+@pytest.mark.parametrize("today,fy", [(date(2026,11,14),"2025-26"), (date(2027,2,1),"2025-26"), (date(2027,4,1),"2026-27")])
+def test_current_compliance_fy(today, fy): assert current_compliance_fy(today) == fy
+
+def test_year_codes(): assert year_codes("2025-26") == ["202603", "202503", "202403"]
+
+def test_slugify_client(): assert slugify_client("KRKA Pharma Pvt. Ltd.") == "krka-pharma-pvt-ltd"
+
+def test_make_run_id_library(): assert make_run_id("CAP", "2025-26", None, date(2026,11,14), 1) == "CAP-FY2526-LIB-20261114-01"
+
+def test_run_id_round_trip_hyphenated_client():
+    rid = make_run_id("PRW", "FY 2025-26", slugify_client("Acme - India Ltd"), date(2026,11,14), 7)
+    assert rid == "PRW-FY2526-acme-india-ltd-20261114-07"
+    p = parse_run_id(rid)
+    assert (p.db, p.fy, p.client_slug, p.run_date, p.seq) == ("PRW", "2025-26", "acme-india-ltd", date(2026,11,14), 7)
+
+def test_parse_run_id_lib_is_none(): assert parse_run_id("CAP-FY2526-LIB-20261114-01").client_slug is None
+
+@pytest.mark.parametrize("bad", ["XYZ-FY2526-LIB-20261114-01", "CAP-FY2526-LIB-20261114-00", "CAP-FY2527-LIB-20261114-01", "CAP-2526-LIB-20261114-01", "CAP-FY2526-LIB-2026111-01"])
+def test_parse_run_id_rejects(bad):
+    with pytest.raises(ValueError): parse_run_id(bad)
+
+@pytest.mark.parametrize("db,seq", [("XYZ", 1), ("CAP", 0), ("CAP", 100)])
+def test_make_run_id_rejects(db, seq):
+    with pytest.raises(ValueError): make_run_id(db, "2025-26", None, date(2026,11,14), seq)
