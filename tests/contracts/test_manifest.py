@@ -235,14 +235,24 @@ def test_good_dest_accepted_and_normalised(dest):
 @pytest.mark.parametrize(
     "url",
     ["http://x.sharepoint.com/a", "javascript:alert(1)", "https://evil.example/a", "https://sharepoint.com.evil.example/a",
-     "https://user:pw@x.sharepoint.com/a", "https://x.sharepoint.com/a\n", "https://x.sharepoint.com/" + "a" * 2000],
+     "https://user:pw@x.sharepoint.com/a", "https://x.sharepoint.com/a\n", "https://x.sharepoint.com/" + "a" * 2000,
+     "https://evil.com\\.sharepoint.com/a", "https://.sharepoint.com/a", " https://x.sharepoint.com/a",
+     "https://x.sharepoint.com:abc/a", "https://x.sharepoint.com:99999/a", "https://x.sharepoint.com:443/a",
+     "https://x.sharepoint.com/a b", "https://-x.sharepoint.com/a", "https://x-.sharepoint.com/a",
+     "https://x..sharepoint.com/a", "https://x_y.sharepoint.com/a", "https://x.sharepoint.com./a",
+     "https://xn--а.sharepoint.com/a", "https://а.sharepoint.com/a", "https://@x.sharepoint.com/a",
+     "https://x.ſharepoint.com/a", "https://x.sharepoint.com\t/a"],
 )
 def test_bad_sharepoint_url_rejected(url):
     with pytest.raises(ValidationError):
         FileEntry.model_validate(_file(sharepoint_url=url))
 
 
-@pytest.mark.parametrize("url", ["https://contoso.sharepoint.com/sites/x/a.csv", "https://Contoso.SharePoint.com/sites/x/a.csv"])
+@pytest.mark.parametrize(
+    "url",
+    ["https://contoso.sharepoint.com/sites/x/a.csv", "https://Contoso.SharePoint.com/sites/x/a.csv",
+     "https://contoso-my.sharepoint.com/personal/a.csv", "https://a.b.sharepoint.com/x"],
+)
 def test_good_sharepoint_url_accepted(url):
     assert FileEntry.model_validate(_file(sharepoint_url=url)).sharepoint_url == url
 

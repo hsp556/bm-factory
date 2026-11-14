@@ -34,6 +34,8 @@ _RESERVED = {
     *(f"{dev}{n}" for dev in ("COM", "LPT") for n in (*"123456789", "¹", "²", "³")),
 }
 _DRIVE_RE = re.compile(r"[A-Za-z]:")
+# re.ASCII matters: without it IGNORECASE lets e.g. U+017F (long s) match "s".
+_SHAREPOINT_HOST_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+sharepoint\.com", re.ASCII | re.IGNORECASE)
 _RAW_DUMPS = "02-Raw-Dumps"
 _COUNTS_JSON = f"{_RAW_DUMPS}/counts.json"
 
@@ -79,15 +81,20 @@ def safe_relative_path(p: str) -> str:
 
 
 def _sharepoint_url(v: str) -> str:
+    """https URL on a *.sharepoint.com host. The host is checked against a strict pattern, not trusted from urlsplit."""
     if len(v) > _URL_MAX:
         raise ValueError(f"URL is longer than {_URL_MAX} characters")
     _printable(v)
+    if "\\" in v or any(c.isspace() for c in v):
+        raise ValueError(f"URL must not contain a backslash or whitespace: {_echo(v)}")
     u = urlsplit(v)
     if u.scheme != "https":
         raise ValueError(f"URL must use https: {_echo(v)}")
-    if u.username is not None or u.password is not None:
+    if "@" in u.netloc:
         raise ValueError("URL must not contain a username or password")
-    if not (u.hostname or "").endswith(".sharepoint.com"):
+    if ":" in u.netloc:
+        raise ValueError(f"URL must not give a port: {_echo(v)}")
+    if not _SHAREPOINT_HOST_RE.fullmatch(u.netloc):
         raise ValueError(f"URL host must be a *.sharepoint.com host: {_echo(v)}")
     return v
 
