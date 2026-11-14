@@ -8,10 +8,15 @@ targets:
   # Capitaline main window
   tp_screener_button: {backend: uia, window: Capitaline, control_type: Button, auto_id: null, name: "TP Screener"}
   data_export_menu: {backend: uia, window: Capitaline, control_type: MenuItem, auto_id: null, name: "Data Export"}
+  export_to_excel_item: {backend: uia, window: Capitaline, control_type: MenuItem, auto_id: null, name: "Export to Excel"}
   # TP Screener window: Domain tab
   domain_tab: {backend: uia, window: "TP Screener", control_type: TabItem, auto_id: null, name: "Domain"}
   portfolio_dropdown: {backend: uia, window: "TP Screener", control_type: ComboBox, auto_id: null, name: "Select Portfolio"}
   listed_only_checkbox: {backend: uia, window: "TP Screener", control_type: CheckBox, auto_id: null, name: "Select Only Listed Companies"}
+  bse_checkbox: {backend: uia, window: "TP Screener", control_type: CheckBox, auto_id: null, name: "BSE"}
+  nse_checkbox: {backend: uia, window: "TP Screener", control_type: CheckBox, auto_id: null, name: "NSE"}
+  company_domain_tree: {backend: uia, window: "TP Screener", control_type: Tree, auto_id: null, name: "Company Domain"}
+  selected_company_domain_list: {backend: uia, window: "TP Screener", control_type: List, auto_id: null, name: "Selected Company Domain"}
   # TP Screener window: Filters tab
   filters_tab: {backend: uia, window: "TP Screener", control_type: TabItem, auto_id: null, name: "Filters"}
   tables_tree: {backend: uia, window: "TP Screener", control_type: Tree, auto_id: null, name: "Tables"}
@@ -19,10 +24,13 @@ targets:
   display_criteria_values_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Display Criteria Values"}
   criteria_values_list: {backend: uia, window: "TP Screener", control_type: List, auto_id: null, name: "Criteria Values"}
   year_range_cell: {backend: uia, window: "TP Screener", control_type: Edit, auto_id: null, name: "Year/Date/Range"}
+  parse_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Parse"}  # label not in SKILL §3D — unverified
   show_sql_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Show SQL"}
   sql_text_box: {backend: uia, window: "TP Screener", control_type: Edit, auto_id: null, name: "SQL"}  # label not in SKILL §3D — unverified
   run_query_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Run Query"}
+  screener_save_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Save"}
   # TP Screener window: Output tab
+  output_tab: {backend: uia, window: "TP Screener", control_type: TabItem, auto_id: null, name: "Output"}
   output_grid: {backend: uia, window: "TP Screener", control_type: DataGrid, auto_id: null, name: "Output"}  # label not in SKILL §3D — unverified
   # Save As dialog (opened by Data Export)
   save_as_filename_box: {backend: uia, window: "Save As", control_type: Edit, auto_id: null, name: "File name:"}  # label not in SKILL §3D — unverified

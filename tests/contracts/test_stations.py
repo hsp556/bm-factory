@@ -14,8 +14,11 @@ from bmfactory.contracts.stations import (
     missing_targets,
 )
 
-STEPS_YAML = Path("stations/capitaline/steps.yaml")
-MAP_YAML = Path("stations/capitaline/screen-map.yaml")
+ROOT = Path(__file__).resolve().parents[2]
+STEPS_YAML = ROOT / "stations/capitaline/steps.yaml"
+MAP_YAML = ROOT / "stations/capitaline/screen-map.yaml"
+LOC = "{backend: uia, window: Capitaline, control_type: null, auto_id: null, name: X}"
+MAP_HEAD = "database: CAP\nversion: 1\nverified: false\napp_version_seen: null\nrecorded_at: null\n"
 
 
 def test_seed_files_load_and_are_consistent():
@@ -102,6 +105,10 @@ def test_unknown_fields_rejected():
         StepDef(id="a", gate="G2", action="click", target="t", sop_ref="x", extra="y")
     with pytest.raises(ValidationError):
         Locator(backend="uia", window="Capitaline", control_type=None, auto_id=None, name="X", xpath="//x")
+    with pytest.raises(ValidationError):
+        StepCatalogue(database="CAP", version=1, steps=[], extra="y")
+    with pytest.raises(ValidationError):
+        ScreenMap(database="CAP", version=1, verified=False, app_version_seen=None, recorded_at=None, targets={}, extra="y")
 
 
 def test_control_characters_rejected():
@@ -121,21 +128,49 @@ def test_version_must_be_positive():
         StepCatalogue(database="CAP", version=0, steps=[])
 
 
-def test_seed_gates_and_order():
-    steps = load_steps(STEPS_YAML).steps
-    assert len(steps) == 17
-    assert [s.gate for s in steps] == ["G2"] * 12 + ["G3"] * 5
-    assert steps[12].id == "run_query" and steps[-1].id == "confirm_save"
+def _seed_steps():
+    return load_steps(STEPS_YAML).steps
+
+
+def test_seed_has_30_unique_steps_and_gate_split():
+    steps = _seed_steps()
+    ids = [s.id for s in steps]
+    assert len(steps) == 30 and len(set(ids)) == 30
+    assert [s.gate for s in steps] == ["G2"] * 23 + ["G3"] * 7
+    assert ids[0] == "open_tp_screener" and ids[-1] == "confirm_save"
+
+
+def test_seed_run_query_is_g2_after_capture_sql():
+    steps = _seed_steps()
+    ids = [s.id for s in steps]
+    by_id = {s.id: s for s in steps}
+    assert by_id["run_query"].gate == "G2"
+    assert ids.index("run_query") > ids.index("capture_sql")
+
+
+def test_seed_parse_immediately_before_show_sql():
+    ids = [s.id for s in _seed_steps()]
+    assert ids.index("parse_query") + 1 == ids.index("show_sql")
+
+
+def test_seed_screenshots_have_no_target():
+    shots = {s.id: s for s in _seed_steps() if s.action == "screenshot"}
+    assert set(shots) == {"screenshot_domain", "screenshot_sql", "screenshot_output"}
+    assert all(s.target is None for s in shots.values())
+    assert {s.params["name"] for s in shots.values()} == {"domain", "sql", "output"}
 
 
 def test_seed_quoted_param_values():
-    steps = {s.id: s for s in load_steps(STEPS_YAML).steps}
+    steps = {s.id: s for s in _seed_steps()}
     assert steps["ensure_listed_only_off"].params == {"value": "off"}
+    assert steps["ensure_bse_off"].params == {"value": "off"}
+    assert steps["ensure_nse_off"].params == {"value": "off"}
     assert steps["set_portfolio_non_aggregate"].params == {"value": "Non Aggregate"}
 
 
-def test_seed_save_path_keeps_backslashes():
-    steps = {s.id: s for s in load_steps(STEPS_YAML).steps}
+def test_seed_save_paths_keep_backslashes():
+    steps = {s.id: s for s in _seed_steps()}
+    assert steps["type_csv_path"].params["value"] == r"C:\BM-Factory\_landing\{run_id}_L{layer}_{field}_{seq}.csv"
     assert steps["type_save_path"].params["value"] == r"C:\BM-Factory\_landing\{run_id}_L{layer}_{field}_{seq}.xls"
 
 
@@ -152,8 +187,9 @@ def test_unquoted_off_is_rejected(tmp_path):
         "  - {id: a, gate: G2, action: select, target: t, params: {value: off}, sop_ref: x}\n",
         encoding="utf-8",
     )
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match="steps.yaml") as exc:
         load_steps(p)
+    assert isinstance(exc.value.__cause__, ValidationError)
 
 
 @pytest.mark.parametrize("loader", [load_steps, load_screen_map])
@@ -168,5 +204,64 @@ def test_non_mapping_yaml_raises_naming_file(tmp_path, loader, text):
 def test_loader_refuses_python_tags(tmp_path):
     p = tmp_path / "evil.yaml"
     p.write_text("database: !!python/object/apply:os.getcwd []\nversion: 1\nsteps: []\n", encoding="utf-8")
-    with pytest.raises(yaml.YAMLError):
+    with pytest.raises(ValueError, match="evil.yaml") as exc:
+        load_steps(p)
+    assert isinstance(exc.value.__cause__, yaml.YAMLError)
+
+
+def test_malformed_yaml_names_file(tmp_path):
+    p = tmp_path / "broken.yaml"
+    p.write_text("database: [CAP\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="broken.yaml") as exc:
+        load_steps(p)
+    assert isinstance(exc.value.__cause__, yaml.YAMLError)
+
+
+def test_bad_utf8_names_file(tmp_path):
+    p = tmp_path / "latin.yaml"
+    p.write_bytes(b"database: CAP\xff\n")
+    with pytest.raises(ValueError, match="latin.yaml"):
+        load_steps(p)
+
+
+def test_schema_invalid_names_file(tmp_path):
+    p = tmp_path / "schema.yaml"
+    p.write_text(MAP_HEAD + "targets:\n  run_query_button: {backend: uia, window: Capitaline, control_type: null, auto_id: null, name: null}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="schema.yaml") as exc:
+        load_screen_map(p)
+    assert isinstance(exc.value.__cause__, ValidationError)
+
+
+@pytest.mark.parametrize("loader", [load_steps, load_screen_map])
+def test_file_over_256_kib_rejected(tmp_path, loader):
+    p = tmp_path / "big.yaml"
+    body = b"database: CAP\nversion: 1\nsteps: []\n"
+    p.write_bytes(body + b"#" * (256 * 1024 + 1 - len(body)))
+    with pytest.raises(ValueError, match=r"big\.yaml.*256 KiB"):
+        loader(p)
+
+
+def test_file_at_256_kib_is_read(tmp_path):
+    p = tmp_path / "edge.yaml"
+    body = b"database: CAP\nversion: 1\nsteps: []\n"
+    p.write_bytes(body + b"#" * (256 * 1024 - len(body)))
+    assert load_steps(p).steps == []
+
+
+def test_duplicate_target_name_rejected(tmp_path):
+    p = tmp_path / "map.yaml"
+    p.write_text(MAP_HEAD + f"targets:\n  run_query_button: {LOC}\n  run_query_button: {LOC}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="duplicate key") as exc:
+        load_screen_map(p)
+    assert "map.yaml" in str(exc.value)
+
+
+def test_duplicate_params_key_rejected(tmp_path):
+    p = tmp_path / "steps.yaml"
+    p.write_text(
+        "database: CAP\nversion: 1\nsteps:\n"
+        "  - {id: a, gate: G2, action: type, target: t, params: {value: \"x\", value: \"y\"}, sop_ref: x}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="duplicate key"):
         load_steps(p)

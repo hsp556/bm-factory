@@ -1,16 +1,16 @@
 """A station's knowledge as data: the step catalogue (WHAT to do, in SOP order) and the screen map (WHERE each
 named control is). When the vendor changes the UI, only the screen map changes.
 
-Both files are YAML that a learning run may rewrite, so they are untrusted: loaded with `yaml.safe_load` only
-and held to the models below.
+Both files are YAML that a learning run may rewrite, so they are untrusted: capped at 256 KiB, parsed with a
+SafeLoader subclass that also rejects duplicate keys, and held to the models below.
 """
 
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator, model_validator
 
 from bmfactory.contracts.command import _Text
 from bmfactory.contracts.ids import DB_CODES
@@ -21,6 +21,7 @@ _STEPS_MAX = 500
 _TARGETS_MAX = 500
 _PARAMS_MAX = 20
 _PATH_MAX = 20
+_FILE_MAX = 256 * 1024  # checked before parsing, so an alias bomb or huge file never reaches the YAML parser
 
 _Name = Annotated[str, StringConstraints(pattern=_NAME_PATTERN, max_length=_NAME_MAX)]
 _Version = Annotated[int, Field(ge=1, strict=True)]
@@ -99,19 +100,57 @@ class ScreenMap(BaseModel):
     _db = field_validator("database")(_known_db)
 
 
-def _load_mapping(path: Path) -> dict:
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+_M = TypeVar("_M", StepCatalogue, ScreenMap)
+
+
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate mapping keys, so a rewrite cannot silently shadow an entry."""
+
+
+def _construct_unique_mapping(loader: _UniqueKeyLoader, node: yaml.MappingNode, deep: bool = False) -> dict:
+    loader.flatten_mapping(node)
+    seen = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        try:
+            duplicate = key in seen
+        except TypeError:  # unhashable key: construct_mapping below reports it
+            continue
+        if duplicate:
+            raise yaml.constructor.ConstructorError(None, None, f"duplicate key {key!r}", key_node.start_mark)
+        seen.add(key)
+    return loader.construct_mapping(node, deep=deep)
+
+
+_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping)
+
+
+def _load(path: Path, model: type[_M]) -> _M:
+    """Read a station YAML file (untrusted). Every failure is a ValueError naming the file."""
+    if path.stat().st_size > _FILE_MAX:
+        raise ValueError(f"{path}: file is larger than {_FILE_MAX // 1024} KiB")
+    with path.open("rb") as f:
+        raw = f.read(_FILE_MAX + 1)
+    if len(raw) > _FILE_MAX:  # grew after the size check
+        raise ValueError(f"{path}: file is larger than {_FILE_MAX // 1024} KiB")
+    try:
+        data = yaml.load(raw.decode("utf-8"), Loader=_UniqueKeyLoader)
+    except (UnicodeDecodeError, yaml.YAMLError) as e:
+        raise ValueError(f"{path}: {e}") from e
     if not isinstance(data, dict):
         raise ValueError(f"{path}: expected a YAML mapping at the top level, got {type(data).__name__}")
-    return data
+    try:
+        return model.model_validate(data)
+    except ValidationError as e:
+        raise ValueError(f"{path}: {e}") from e
 
 
 def load_steps(path: Path) -> StepCatalogue:
-    return StepCatalogue.model_validate(_load_mapping(path))
+    return _load(path, StepCatalogue)
 
 
 def load_screen_map(path: Path) -> ScreenMap:
-    return ScreenMap.model_validate(_load_mapping(path))
+    return _load(path, ScreenMap)
 
 
 def missing_targets(steps: StepCatalogue, smap: ScreenMap) -> list[str]:
