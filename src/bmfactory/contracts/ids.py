@@ -15,6 +15,8 @@ _FY_RE = re.compile(r"([0-9]{4}|[0-9]{2})-([0-9]{4}|[0-9]{2})")
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _SLUG_MAX = 30
 _LIBRARY = "LIB"
+# FY start years whose two-digit RunID form maps back to one year.
+_FY_START_MIN, _FY_START_MAX = 2000, 2098
 
 
 class RunIdParts(BaseModel):
@@ -43,7 +45,9 @@ def normalise_fy(text: str) -> str:
         ok = int(end_s) == (start + 1) % 100
     if not ok:
         raise ValueError(f"financial year must span consecutive years: {text!r}")
-    return f"{start}-{(start + 1) % 100:02d}"
+    if not _FY_START_MIN <= start <= _FY_START_MAX:
+        raise ValueError(f"financial year must start in {_FY_START_MIN}-{_FY_START_MAX}: {text!r}")
+    return f"{start:04d}-{(start + 1) % 100:02d}"
 
 
 def current_compliance_fy(today: date) -> str:
@@ -66,12 +70,17 @@ def slugify_client(name: str) -> str:
     return slug
 
 
+def _valid_slug(slug: str) -> bool:
+    """A client slug; 'lib' is refused because it equals the LIB marker on case-insensitive SharePoint."""
+    return bool(_SLUG_RE.fullmatch(slug)) and len(slug) <= _SLUG_MAX and slug.upper() != _LIBRARY
+
+
 def make_run_id(db: str, fy: str, client_slug: str | None, run_date: date, seq: int) -> str:
     if db not in DB_CODES:
         raise ValueError(f"unknown database code: {db!r}")
     if not 1 <= seq <= 99:
         raise ValueError(f"seq must be 1-99: {seq}")
-    if client_slug is not None and not (_SLUG_RE.fullmatch(client_slug) and len(client_slug) <= _SLUG_MAX):
+    if client_slug is not None and not _valid_slug(client_slug):
         raise ValueError(f"invalid client slug: {client_slug!r}")
     norm = normalise_fy(fy)
     start = int(norm[:4])
@@ -99,8 +108,17 @@ def parse_run_id(run_id: str) -> RunIdParts:
     client = "-".join(client_tokens)
     if client == _LIBRARY:
         client_slug = None
-    elif _SLUG_RE.fullmatch(client) and len(client) <= _SLUG_MAX:
+    elif _valid_slug(client):
         client_slug = client
     else:
         raise ValueError(f"malformed client in RunID: {run_id!r}")
     return RunIdParts(db=db, fy=fy, client_slug=client_slug, run_date=run_date, seq=int(seq_token))
+
+
+def check_run_id_matches(run_id: str, db: str, fy: str) -> None:
+    """Raise if the RunID's database or financial year differs from the command's."""
+    parts = parse_run_id(run_id)
+    if parts.db != db:
+        raise ValueError(f"run_id: database {parts.db} does not match command db {db}")
+    if parts.fy != fy:
+        raise ValueError(f"run_id: financial year {parts.fy} does not match command fy {fy}")

@@ -5,12 +5,11 @@ Both files are YAML that a learning run may rewrite, so they are untrusted: capp
 SafeLoader subclass that also rejects duplicate keys, and held to the models below.
 """
 
-from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator, model_validator
 
 from bmfactory.contracts.command import _Text
 from bmfactory.contracts.ids import DB_CODES
@@ -94,7 +93,7 @@ class ScreenMap(BaseModel):
     version: _Version
     verified: Annotated[bool, Field(strict=True)]
     app_version_seen: _Text | None
-    recorded_at: datetime | None
+    recorded_at: AwareDatetime | None
     targets: Annotated[dict[_Name, Locator], Field(max_length=_TARGETS_MAX)]
 
     _db = field_validator("database")(_known_db)

@@ -175,3 +175,10 @@ def test_fy_key():
 def test_industry_nic_value():
     c = parse_command("CAP | Industry: NIC 6201 | Product: y", T)
     assert (c.industry, c.nic_codes) == ("NIC 6201", ["6201"])
+
+
+# Final review W1: the model rejects unknown keys
+@pytest.mark.parametrize("build", [lambda d: Command(**d), Command.model_validate])
+def test_model_rejects_unknown_key(build):
+    with pytest.raises(ValidationError):
+        build({**BASE, "bogus": 1})

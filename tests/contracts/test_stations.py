@@ -265,3 +265,18 @@ def test_duplicate_params_key_rejected(tmp_path):
     )
     with pytest.raises(ValueError, match="duplicate key"):
         load_steps(p)
+
+
+# Final review W2: recorded_at must be timezone-aware when given
+def _smap(recorded_at):
+    return ScreenMap(database="CAP", version=1, verified=False, app_version_seen=None, recorded_at=recorded_at, targets={})
+
+
+def test_naive_recorded_at_rejected():
+    with pytest.raises(ValidationError):
+        _smap("2026-11-14T10:00:00")
+
+
+def test_aware_or_null_recorded_at_accepted():
+    assert _smap(None).recorded_at is None
+    assert _smap("2026-11-14T10:00:00+05:30").recorded_at.utcoffset() is not None

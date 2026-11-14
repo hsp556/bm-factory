@@ -3,6 +3,13 @@
 # Placeholders in {braces} are filled by the orchestrator from strategy.json and the run.
 # Quote every params value: an unquoted off/on/yes/no is read by YAML as a boolean and rejected.
 #
+# Save-path placeholders must give names the manifest accepts as raw dumps,
+# <run_id>_L<n>_<field>_<seq3>.<csv|xls|xlsx> (tests/contracts/test_manifest.py checks the two templates):
+#   {run_id}  a RunID, e.g. CAP-FY2526-LIB-20261114-01
+#   {layer}   a single digit 1-8 (the template supplies the "L")
+#   {field}   matches [A-Za-z0-9]+ (no spaces, hyphens or underscores), e.g. NICCode
+#   {seq}     three digits, e.g. 001
+#
 # Engine behaviour, not listed steps:
 #   - "screenshot before every click" (SKILL §3D desktop hygiene)
 #   - one evidence-log row per action

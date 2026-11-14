@@ -1,6 +1,7 @@
 {
   "$defs": {
     "Command": {
+      "additionalProperties": false,
       "properties": {
         "client": {
           "anyOf": [

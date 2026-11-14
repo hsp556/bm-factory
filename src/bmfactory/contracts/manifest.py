@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from bmfactory.contracts.command import Command, _echo, _printable, _Text
-from bmfactory.contracts.ids import parse_run_id
+from bmfactory.contracts.ids import check_run_id_matches, parse_run_id
 
 RUN_FOLDERS: tuple[str, ...] = (
     "00-Command",
@@ -179,6 +179,7 @@ class Manifest(BaseModel):
 
     @model_validator(mode="after")
     def _consistent(self) -> "Manifest":
+        check_run_id_matches(self.run_id, self.command.db, self.command.fy)
         ids = [layer.id for layer in self.layers]
         if len(set(ids)) != len(ids):
             raise ValueError(f"layers: duplicate layer id in {ids}")

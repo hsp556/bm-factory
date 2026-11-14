@@ -1,5 +1,5 @@
 from bmfactory.contracts.stations import Locator, ScreenMap
-from bmfactory.inspector.coverage import ControlInfo, TargetScore, render_report, score_targets
+from bmfactory.inspector.coverage import ControlInfo, TargetScore, render_report, score_targets, unscored_targets
 
 
 def ctl(name="", auto_id="", ctype="Button", window="TP Screener"):
@@ -96,3 +96,17 @@ def test_empty_name_or_auto_id_never_matches():
     blank = [ctl(""), ctl("", " ")]
     assert score_targets(smap(x=loc(name="&", control_type="Button")), blank)[0].rating == "red"
     assert score_targets(smap(x=loc(auto_id=" ", control_type="Button")), blank)[0].rating == "red"
+
+
+# Final review W5: targets whose window was not dumped are listed, not silently omitted.
+
+def test_unscored_targets_lists_map_targets_whose_window_was_not_dumped():
+    m = smap(b=loc(window="Save As", name="Save"), a=loc(window="Capitaline", name="X"), run=loc(name="Run Query"))
+    assert unscored_targets(m, [ctl("Run Query")]) == ["a", "b"]
+    assert unscored_targets(m, [ctl("x", window="Save As"), ctl("y", window="Capitaline"), ctl("z")]) == []
+
+def test_report_lists_unscored_targets_or_none():
+    scores = [TargetScore(target="run", rating="green", matches=1, reason="unique name+type")]
+    assert "Not scored (window not dumped): a, b\n" in render_report(scores, ["TP Screener"], ["a", "b"])
+    assert "Not scored (window not dumped): none\n" in render_report(scores, ["TP Screener"], [])
+    assert "Not scored" not in render_report(scores, ["TP Screener"])

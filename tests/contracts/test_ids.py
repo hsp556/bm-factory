@@ -60,3 +60,17 @@ def test_parse_run_id_rejects_newline_and_non_ascii_digits(bad):
 @pytest.mark.parametrize("bad", ["٢٥-٢٦", "2025-26\n-"])
 def test_normalise_fy_rejects_non_ascii_digits(bad):
     with pytest.raises(ValueError): normalise_fy(bad)
+
+# Final review W8: FY start year 2000-2098, so the RunID's two-digit form is unambiguous
+@pytest.mark.parametrize("bad", ["0001-02", "1999-00", "2099-00", "FY 1999-2000"])
+def test_normalise_fy_rejects_out_of_range_years(bad):
+    with pytest.raises(ValueError): normalise_fy(bad)
+
+def test_normalise_fy_accepts_last_year_in_range(): assert normalise_fy("2098-99") == "2098-99"
+
+# Final review W9: the client slug "lib" would collide with the LIB marker on case-insensitive SharePoint
+def test_make_run_id_rejects_lib_slug():
+    with pytest.raises(ValueError): make_run_id("CAP", "2025-26", "lib", date(2026,11,14), 1)
+
+def test_parse_run_id_rejects_lib_slug():
+    with pytest.raises(ValueError): parse_run_id("CAP-FY2526-lib-20261114-01")

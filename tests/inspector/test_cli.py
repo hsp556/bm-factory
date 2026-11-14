@@ -114,14 +114,17 @@ def test_successful_run_writes_raw_dump_and_a_report_without_ui_text(tmp_path):
     smap = load_screen_map(Path(MAP))
     assert spy.walked == [frozenset(l.name for l in smap.targets.values() if l.name)]
 
-    assert files(tmp_path) == ["capitaline-feasibility.md", "raw/controls-tp-screener-20261114-103000.json"]
+    assert files(tmp_path) == ["capitaline-feasibility.md", "raw/.gitignore", "raw/controls-tp-screener-20261114-103000.json"]
     data = json.loads((tmp_path / "out/raw/controls-tp-screener-20261114-103000.json").read_text(encoding="utf-8"))
     assert len(data) == 6 and data[1]["name"] == "Run Query" and data[5]["name"] == ""
 
     md = (tmp_path / "out/capitaline-feasibility.md").read_text(encoding="utf-8")
     assert "| run_query_button | green | 1 |" in md
     assert "| screener_save_button | amber | 2 |" in md
-    assert "tp_screener_button" not in md  # a Capitaline-window target; that window was not dumped
+    assert "| tp_screener_button |" not in md  # a Capitaline-window target; that window was not dumped
+    unscored = sorted(t for t, l in smap.targets.items() if l.window.casefold() not in LIVE_TITLE.casefold())
+    assert "tp_screener_button" in unscored and "run_query_button" not in unscored
+    assert f"Not scored (window not dumped): {', '.join(unscored)}\n" in md
     assert "Windows: TP Screener" in md
     assert "ACME" not in md and LIVE_TITLE not in md
 
@@ -181,3 +184,17 @@ def test_enumeration_failure_exits_1(tmp_path, capsys):
 def test_raw_dumps_are_git_ignored():
     lines = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "docs/discovery/raw/" in lines
+
+
+# Final review W6: raw dumps are git-ignored wherever --out points
+def test_raw_folder_gets_a_gitignore(tmp_path):
+    assert run(tmp_path, Spy(), "--yes") == 0
+    assert (tmp_path / "out/raw/.gitignore").read_text(encoding="utf-8") == "*\n"
+
+
+def test_existing_raw_gitignore_is_kept(tmp_path):
+    raw = tmp_path / "out/raw"
+    raw.mkdir(parents=True)
+    (raw / ".gitignore").write_text("custom\n", encoding="utf-8")
+    assert run(tmp_path, Spy(), "--yes") == 0
+    assert (raw / ".gitignore").read_text(encoding="utf-8") == "custom\n"

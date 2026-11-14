@@ -13,7 +13,7 @@ import unicodedata
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, Field, StringConstraints, ValidationError, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator, model_validator
 
 from bmfactory.contracts.ids import DB_CODES, current_compliance_fy, normalise_fy
 
@@ -48,6 +48,8 @@ _NicCode = Annotated[str, StringConstraints(pattern=r"^[0-9]{2,5}$")]
 
 
 class Command(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     db: str
     fy: str
     industry: _Text

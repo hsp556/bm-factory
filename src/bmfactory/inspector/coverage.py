@@ -100,13 +100,20 @@ def score_targets(smap: ScreenMap, controls: list[ControlInfo]) -> list[TargetSc
     return scores
 
 
+def unscored_targets(smap: ScreenMap, controls: list[ControlInfo]) -> list[str]:
+    """Map target names (sorted) that `score_targets` skips because their window was not dumped."""
+    windows = {c.window.casefold() for c in controls}
+    return [t for t, loc in sorted(smap.targets.items()) if not any(loc.window.casefold() in w for w in windows)]
+
+
 def _cell(s: str) -> str:
     return s.replace("|", "\\|")
 
 
-def render_report(scores: list[TargetScore], windows: list[str]) -> str:
-    """Markdown section: the screen map's window names that were matched, a rating summary, then one row per
-    target. Callers pass map window names, never live window titles; no control name ever reaches this text."""
+def render_report(scores: list[TargetScore], windows: list[str], unscored: list[str] | None = None) -> str:
+    """Markdown section: the screen map's window names that were matched, a rating summary, the map targets not
+    scored (when `unscored` is given), then one row per target. Callers pass map window and target names, never
+    live window titles; no control name ever reaches this text."""
     counts = {r: sum(s.rating == r for s in scores) for r in ("green", "amber", "red")}
     lines = [
         "### Screen-map coverage",
@@ -115,6 +122,10 @@ def render_report(scores: list[TargetScore], windows: list[str]) -> str:
         "",
         "Summary: " + ", ".join(f"{r}: {n}" for r, n in counts.items()),
         "",
+    ]
+    if unscored is not None:
+        lines += ["Not scored (window not dumped): " + (", ".join(_cell(t) for t in unscored) or "none"), ""]
+    lines += [
         "| target | rating | matches | reason |",
         "|---|---|---|---|",
     ]

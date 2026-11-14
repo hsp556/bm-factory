@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from bmfactory.contracts.stations import load_screen_map
-from bmfactory.inspector.coverage import render_report, score_targets
+from bmfactory.inspector.coverage import render_report, score_targets, unscored_targets
 from bmfactory.inspector.dump import MAX_CONTROLS, compile_title_pattern, matching_windows, top_level_windows, walk
 
 _REPORT = "capitaline-feasibility.md"
@@ -81,6 +81,11 @@ def main(argv: list[str] | None = None, windows=top_level_windows, confirm=_ask,
     stamp = now()
     raw_dir = args.out / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
+    try:  # raw dumps hold live UI text; keep them out of git wherever --out points
+        with (raw_dir / ".gitignore").open("x", encoding="utf-8") as f:
+            f.write("*\n")
+    except FileExistsError:
+        pass
     dump_file = raw_dir / f"controls-{_slug(args.window)}-{stamp:%Y%m%d-%H%M%S}.json"
     try:
         with dump_file.open("x", encoding="utf-8") as f:
@@ -93,7 +98,7 @@ def main(argv: list[str] | None = None, windows=top_level_windows, confirm=_ask,
     section = [f"## Inspector run {stamp:%Y-%m-%d %H:%M:%S}", "", f"Dump: `raw/{dump_file.name}` ({len(controls)} controls)", ""]
     if len(controls) >= MAX_CONTROLS:
         section.append(f"WARNING: the walk reached the {MAX_CONTROLS}-control cap; the dump is incomplete.\n")
-    section.append(render_report(scores, map_windows))
+    section.append(render_report(scores, map_windows, unscored_targets(smap, controls)))
     with (args.out / _REPORT).open("a", encoding="utf-8") as f:
         f.write("\n".join(section) + "\n")
 

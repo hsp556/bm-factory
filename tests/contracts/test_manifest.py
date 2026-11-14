@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -6,9 +7,11 @@ from pydantic import ValidationError
 from bmfactory.contracts.command import parse_command
 from bmfactory.contracts.job import Job
 from bmfactory.contracts.manifest import FileEntry, Manifest, safe_relative_path
+from bmfactory.contracts.stations import load_steps
 
 RUN = "CAP-FY2526-LIB-20261114-01"
 SHA = "a" * 64
+AWARE = datetime(2026, 11, 14, tzinfo=timezone.utc)
 
 
 def good_manifest() -> dict:
@@ -180,7 +183,7 @@ def test_job_rejects_bad_run_id():
 
 def test_job_round_trips_from_json():
     cmd = parse_command("CAP | Industry: x | Product: y", date(2026, 11, 14))
-    job = Job(run_id=RUN, dest="BM Backup/Capitaline", command=cmd, created_at=datetime(2026, 11, 14), status="inbox")
+    job = Job(run_id=RUN, dest="BM Backup/Capitaline", command=cmd, created_at=AWARE, status="inbox")
     assert Job.model_validate_json(job.model_dump_json()) == job
 
 
@@ -191,7 +194,7 @@ def _cmd():
 
 
 def _job(**over):
-    kw = dict(run_id=RUN, dest="BM Backup/Capitaline", command=_cmd(), created_at=datetime(2026, 11, 14), status="inbox")
+    kw = dict(run_id=RUN, dest="BM Backup/Capitaline", command=_cmd(), created_at=AWARE, status="inbox")
     kw.update(over)
     return Job.model_validate(kw)
 
@@ -379,3 +382,42 @@ def test_error_echo_truncated():
     with pytest.raises(ValidationError) as e:
         _job(dest="BM Backup/" + "z" * 300 + "|")
     assert "z" * 51 not in str(e.value)
+
+
+# --- final review wave ---------------------------------------------------------------------------
+
+# W2
+def test_naive_job_created_at_rejected():
+    with pytest.raises(ValidationError):
+        _job(created_at=datetime(2026, 11, 14))
+    with pytest.raises(ValidationError):
+        _job(created_at="2026-11-14T10:00:00")
+
+
+# W3: the RunID's db and fy must match the embedded command
+@pytest.mark.parametrize("run_id", ["PRW-FY2526-LIB-20261114-01", "CAP-FY2425-LIB-20261114-01"])
+def test_job_run_id_must_match_command(run_id):
+    with pytest.raises(ValidationError, match="run_id"):
+        _job(run_id=run_id)
+
+
+@pytest.mark.parametrize("run_id", ["PRW-FY2526-LIB-20261114-01", "CAP-FY2425-LIB-20261114-01"])
+def test_manifest_run_id_must_match_command(run_id):
+    m = good_manifest()
+    m["run_id"] = run_id
+    m["files"][0]["path"] = f"02-Raw-Dumps/{run_id}_L1_NICCode_001.csv"
+    with pytest.raises(ValidationError, match="run_id"):
+        Manifest.model_validate(m)
+
+
+# W4: the seed save-path templates produce names the manifest accepts as raw dumps
+@pytest.mark.parametrize("step_id", ["type_csv_path", "type_save_path"])
+def test_seed_save_path_templates_give_valid_raw_dump_names(step_id):
+    steps = load_steps(Path(__file__).resolve().parents[2] / "stations/capitaline/steps.yaml")
+    template = next(s for s in steps.steps if s.id == step_id).params["value"]
+    filled = (template.replace("{run_id}", "CAP-FY2526-LIB-20261114-01").replace("{layer}", "1")
+              .replace("{field}", "NICCode").replace("{seq}", "001"))
+    assert "{" not in filled
+    m = good_manifest()
+    m["files"][0] = _file(path="02-Raw-Dumps/" + filled.rsplit("\\", 1)[-1], kind="raw_dump", layer="L1")
+    assert Manifest.model_validate(m).files[0].layer == "L1"
