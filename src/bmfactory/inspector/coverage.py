@@ -35,25 +35,43 @@ class TargetScore(BaseModel):
     reason: str
 
 
-def _norm(s: str) -> str:
+# Control types whose labels are buttons, menus, tabs and similar chrome, never database content (ruling R11).
+NAME_TYPES = frozenset({"Button", "SplitButton", "MenuItem", "Menu", "MenuBar", "Tab", "TabItem", "CheckBox",
+                        "RadioButton", "ComboBox", "ToolBar", "TitleBar", "Group"})
+
+
+def norm_name(s: str) -> str:
     return s.replace("&", "").strip().casefold()
+
+
+def _code(s: str) -> str:
+    return "`" + s.replace("`", "") + "`"
 
 
 def _score(target: str, loc: Locator, controls: list[ControlInfo]) -> TargetScore:
     def score(rating, matches, reason):
         return TargetScore(target=target, rating=rating, matches=matches, reason=reason)
 
+    auto_id = (loc.auto_id or "").strip()
+    name = norm_name(loc.name or "")
+    if not auto_id and not name:
+        return score("red", 0, "path-only locator; the inspector cannot check paths")
+
     id_note = ""
-    if loc.auto_id is not None:
-        by_id = [c for c in controls if c.auto_id == loc.auto_id]
+    if auto_id:
+        by_id = [c for c in controls if c.auto_id.strip() == auto_id]
         if len(by_id) == 1:
             return score("green", 1, "unique auto_id")
         if by_id:
             return score("amber", len(by_id), f"{len(by_id)} controls share this auto_id")
         id_note = "auto_id not found; "
 
-    by_name = [c for c in controls if loc.name is not None and _norm(c.name) == _norm(loc.name)]
+    by_name = [c for c in controls if name and norm_name(c.name) == name]
     if not by_name:
+        if loc.control_type not in NAME_TYPES:
+            kind = _code(loc.control_type) if loc.control_type else "an unset type"
+            return score("red", 0, id_note + f"no control matches; names of {kind} are only recorded when they equal "
+                                              "the map label, so capture an auto_id from the raw dump")
         return score("red", 0, id_note + "no control matches")
     typed = [c for c in by_name if loc.control_type is not None and c.control_type.casefold() == loc.control_type.casefold()]
     if len(typed) == 1:
@@ -65,8 +83,8 @@ def _score(target: str, loc: Locator, controls: list[ControlInfo]) -> TargetScor
     if loc.control_type is None:
         why = "control type unset in map"
     else:
-        found = ", ".join(sorted({c.control_type or "?" for c in by_name}))
-        why = f"type {loc.control_type} expected, found {found}"
+        found = ", ".join(_code(t or "?") for t in sorted({c.control_type for c in by_name}))
+        why = f"type {_code(loc.control_type)} expected, found {found}"
     return score("amber", len(by_name), id_note + f"{len(by_name)} matched on name only ({why})")
 
 
@@ -87,7 +105,8 @@ def _cell(s: str) -> str:
 
 
 def render_report(scores: list[TargetScore], windows: list[str]) -> str:
-    """Markdown section: windows inspected, a rating summary, then one row per target."""
+    """Markdown section: the screen map's window names that were matched, a rating summary, then one row per
+    target. Callers pass map window names, never live window titles; no control name ever reaches this text."""
     counts = {r: sum(s.rating == r for s in scores) for r in ("green", "amber", "red")}
     lines = [
         "### Screen-map coverage",

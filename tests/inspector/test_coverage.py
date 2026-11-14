@@ -78,3 +78,21 @@ def test_results_sorted_by_target():
 def test_report_escapes_pipes_from_ui_text():
     md = render_report([TargetScore(target="run", rating="red", matches=0, reason="a|b")], ["Win | 2"])
     assert "a\\|b" in md and "Win \\| 2" in md
+
+def test_report_wraps_control_types_in_code_spans_without_backticks():
+    s = score_targets(smap(dom=loc(name="Domain", control_type="TabItem")), [ctl("Domain", ctype="Pa`ne")])
+    assert "`TabItem`" in s[0].reason and "`Pane`" in s[0].reason
+
+def test_red_for_type_whose_names_are_not_recorded_points_to_auto_id():
+    s = score_targets(smap(x=loc(name="Year/Date/Range", control_type="Edit")), [ctl("", ctype="Edit")])
+    assert (s[0].rating, s[0].matches) == ("red", 0)
+    assert "only recorded when they equal the map label" in s[0].reason and "auto_id" in s[0].reason and "raw dump" in s[0].reason
+
+def test_path_only_locator_is_red_with_reason():
+    s = score_targets(smap(x=loc(path=["a", "b"])), [ctl("a")])
+    assert (s[0].rating, s[0].matches) == ("red", 0) and "path-only" in s[0].reason
+
+def test_empty_name_or_auto_id_never_matches():
+    blank = [ctl(""), ctl("", " ")]
+    assert score_targets(smap(x=loc(name="&", control_type="Button")), blank)[0].rating == "red"
+    assert score_targets(smap(x=loc(auto_id=" ", control_type="Button")), blank)[0].rating == "red"
