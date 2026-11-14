@@ -1,0 +1,29 @@
+# v1 seeded from SKILL §3D labels; verify with the inspector and the supervised learning run (H5/H5b)
+database: CAP
+version: 1
+verified: false
+app_version_seen: null
+recorded_at: null
+targets:
+  # Capitaline main window
+  tp_screener_button: {backend: uia, window: Capitaline, control_type: Button, auto_id: null, name: "TP Screener"}
+  data_export_menu: {backend: uia, window: Capitaline, control_type: MenuItem, auto_id: null, name: "Data Export"}
+  # TP Screener window: Domain tab
+  domain_tab: {backend: uia, window: "TP Screener", control_type: TabItem, auto_id: null, name: "Domain"}
+  portfolio_dropdown: {backend: uia, window: "TP Screener", control_type: ComboBox, auto_id: null, name: "Select Portfolio"}
+  listed_only_checkbox: {backend: uia, window: "TP Screener", control_type: CheckBox, auto_id: null, name: "Select Only Listed Companies"}
+  # TP Screener window: Filters tab
+  filters_tab: {backend: uia, window: "TP Screener", control_type: TabItem, auto_id: null, name: "Filters"}
+  tables_tree: {backend: uia, window: "TP Screener", control_type: Tree, auto_id: null, name: "Tables"}
+  fields_checklist: {backend: uia, window: "TP Screener", control_type: List, auto_id: null, name: "Fields"}
+  display_criteria_values_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Display Criteria Values"}
+  criteria_values_list: {backend: uia, window: "TP Screener", control_type: List, auto_id: null, name: "Criteria Values"}
+  year_range_cell: {backend: uia, window: "TP Screener", control_type: Edit, auto_id: null, name: "Year/Date/Range"}
+  show_sql_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Show SQL"}
+  sql_text_box: {backend: uia, window: "TP Screener", control_type: Edit, auto_id: null, name: "SQL"}  # label not in SKILL §3D — unverified
+  run_query_button: {backend: uia, window: "TP Screener", control_type: Button, auto_id: null, name: "Run Query"}
+  # TP Screener window: Output tab
+  output_grid: {backend: uia, window: "TP Screener", control_type: DataGrid, auto_id: null, name: "Output"}  # label not in SKILL §3D — unverified
+  # Save As dialog (opened by Data Export)
+  save_as_filename_box: {backend: uia, window: "Save As", control_type: Edit, auto_id: null, name: "File name:"}  # label not in SKILL §3D — unverified
+  save_as_save_button: {backend: uia, window: "Save As", control_type: Button, auto_id: null, name: "Save"}  # label not in SKILL §3D — unverified

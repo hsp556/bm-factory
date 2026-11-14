@@ -1,0 +1,27 @@
+# Capitaline TP Screener: one search layer, in SOP order (SKILL §3D). WHAT to do; WHERE is in screen-map.yaml.
+# Placeholders in {braces} are filled by the orchestrator from strategy.json and the run.
+# Quote every params value: an unquoted off/on/yes/no is read by YAML as a boolean and rejected.
+database: CAP
+version: 1
+steps:
+  # §3D.1 Domain
+  - {id: open_tp_screener, gate: G2, action: click, target: tp_screener_button, sop_ref: "SKILL §3D.1"}
+  - {id: open_domain_tab, gate: G2, action: click, target: domain_tab, sop_ref: "SKILL §3D.1"}
+  - {id: set_portfolio_non_aggregate, gate: G2, action: select, target: portfolio_dropdown, params: {value: "Non Aggregate"}, sop_ref: "SKILL §3D.1"}
+  - {id: ensure_listed_only_off, gate: G2, action: select, target: listed_only_checkbox, params: {value: "off"}, sop_ref: "SKILL §3D.1"}
+  # §3D.2 Filters
+  - {id: open_filters_tab, gate: G2, action: click, target: filters_tab, sop_ref: "SKILL §3D.2"}
+  - {id: pick_table, gate: G2, action: select, target: tables_tree, params: {value: "{table}"}, sop_ref: "SKILL §3D.2"}
+  - {id: pick_field, gate: G2, action: select, target: fields_checklist, params: {value: "{field}"}, sop_ref: "SKILL §3D.2"}
+  - {id: show_criteria_values, gate: G2, action: click, target: display_criteria_values_button, sop_ref: "SKILL §3D.2"}
+  - {id: set_criteria, gate: G2, action: select, target: criteria_values_list, params: {value: "{criteria}"}, sop_ref: "SKILL §3D.2"}
+  - {id: set_year_range, gate: G2, action: type, target: year_range_cell, params: {value: "{year_range}"}, sop_ref: "SKILL §3D.2"}
+  - {id: show_sql, gate: G2, action: click, target: show_sql_button, sop_ref: "SKILL §3D.2"}
+  - {id: capture_sql, gate: G2, action: read_text, target: sql_text_box, sop_ref: "SKILL §3D.2"}
+  # §3D.3 Output (gate G3 from here on)
+  - {id: run_query, gate: G3, action: click, target: run_query_button, sop_ref: "SKILL §3D.3"}
+  - {id: read_output, gate: G3, action: read_grid, target: output_grid, sop_ref: "SKILL §3D.3"}
+  - {id: open_data_export, gate: G3, action: click, target: data_export_menu, sop_ref: "SKILL §3D.3"}
+  # Single-quoted so the backslashes are kept literally.
+  - {id: type_save_path, gate: G3, action: type, target: save_as_filename_box, params: {value: 'C:\BM-Factory\_landing\{run_id}_L{layer}_{field}_{seq}.xls'}, sop_ref: "SKILL §3D.3"}
+  - {id: confirm_save, gate: G3, action: click, target: save_as_save_button, sop_ref: "SKILL §3D.3"}
