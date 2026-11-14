@@ -14,9 +14,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+station = ["pywinauto>=0.6.8"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bmfactory"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "system3: needs the live Capitaline desktop",
+]
