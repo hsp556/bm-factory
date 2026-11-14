@@ -103,6 +103,7 @@
       "type": "object"
     },
     "FileEntry": {
+      "additionalProperties": false,
       "properties": {
         "bytes": {
           "minimum": 0,
@@ -127,6 +128,16 @@
         "layer": {
           "anyOf": [
             {
+              "enum": [
+                "L1",
+                "L2",
+                "L3",
+                "L4",
+                "L5",
+                "L6",
+                "L7",
+                "L8"
+              ],
               "type": "string"
             },
             {
@@ -154,6 +165,11 @@
             }
           ],
           "title": "Sharepoint Url"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
         }
       },
       "required": [
@@ -162,14 +178,18 @@
         "layer",
         "sha256",
         "bytes",
+        "time",
         "sharepoint_url"
       ],
       "title": "FileEntry",
       "type": "object"
     },
     "LayerResult": {
+      "additionalProperties": false,
       "properties": {
         "field": {
+          "maxLength": 200,
+          "minLength": 1,
           "title": "Field",
           "type": "string"
         },
@@ -193,6 +213,7 @@
           "type": "integer"
         },
         "sql": {
+          "maxLength": 20000,
           "title": "Sql",
           "type": "string"
         }
@@ -207,6 +228,7 @@
       "type": "object"
     },
     "SourceInfo": {
+      "additionalProperties": false,
       "properties": {
         "data_date": {
           "anyOf": [
@@ -221,6 +243,8 @@
           "title": "Data Date"
         },
         "database": {
+          "maxLength": 200,
+          "minLength": 1,
           "title": "Database",
           "type": "string"
         },
@@ -242,6 +266,7 @@
       "type": "object"
     },
     "Universe": {
+      "additionalProperties": false,
       "properties": {
         "distinct_companies": {
           "minimum": 0,
@@ -251,6 +276,8 @@
         "peer_set": {
           "anyOf": [
             {
+              "maxLength": 200,
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -268,14 +295,18 @@
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "properties": {
     "command": {
       "$ref": "#/$defs/Command"
     },
     "fallbacks_used": {
       "items": {
+        "maxLength": 200,
+        "minLength": 1,
         "type": "string"
       },
+      "maxItems": 100,
       "title": "Fallbacks Used",
       "type": "array"
     },
@@ -283,6 +314,7 @@
       "items": {
         "$ref": "#/$defs/FileEntry"
       },
+      "maxItems": 5000,
       "title": "Files",
       "type": "array"
     },
@@ -295,6 +327,7 @@
       "items": {
         "$ref": "#/$defs/LayerResult"
       },
+      "maxItems": 8,
       "title": "Layers",
       "type": "array"
     },

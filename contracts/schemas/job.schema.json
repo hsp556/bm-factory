@@ -103,6 +103,7 @@
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "properties": {
     "command": {
       "$ref": "#/$defs/Command"
@@ -113,8 +114,6 @@
       "type": "string"
     },
     "dest": {
-      "maxLength": 200,
-      "minLength": 1,
       "title": "Dest",
       "type": "string"
     },
