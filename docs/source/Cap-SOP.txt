@@ -1,0 +1,443 @@
+
+Capitaline BM Agent — SOP & Playbook
+BM Factory · System 3 (Capitaline) · Agentic, browser-only Indian TP comparable search, evidence, gates and hand-off to TAIGA · v1.0 · 7 Nov 2026
+1. Executive summary
+This SOP is the operating manual the Capitaline BM agent follows end to end. A partner types one line from a phone or iPad — year, industry, product — and the agent on the System 3 desktop runs the full Capitaline search in Chrome, exports every dump, files it as BM Backup on SharePoint, and hands it to the TAIGA Document Enabler. From there the economic analysis starts in TAIGA. No database API and no extra licence spend are involved: the agent uses the firm's existing licensed desktop seat, at human pace, operating the Capitaline Windows application through computer use.
+Element
+Design decision
+Trigger
+One-line command from mobile / iPad (grammar in §4). Minimum: FY + industry + product. Everything else defaults.
+Executor
+Capitaline desktop application on the dedicated Windows System 3 desktop (Hyderabad), operated by Claude through computer use from the Claude desktop app; Claude in Chrome only for SharePoint and websites. No API. SBC's subscription is the desktop version, which does not run on Mac.
+Search logic
+Eight-layer Capitaline classification sweep (NIC code → NIC activity → industry → ITC/HS product code → product name → raw material → segment → business-activity text), all combinations, de-duplicated.
+Screens
+Quantitative waterfall then qualitative annual-report review, each reject carrying a reason code and evidence link.
+Law
+Section 92C read with Rules 10B, 10C, 10CA and 10D of the Income-tax Act 1961 / Rules 1962 (FY 2025-26 = AY 2026-27); Income-tax Act 2025 mapping flagged for tax year 2026-27 onward.
+Storage
+SharePoint client folder → 03 TAIGA & Workings → BM Backup → Capitaline → <RunID>, plus a firm-level BM Factory library for reusable industry searches.
+Gates
+G0–G8. Machine gates self-pass on evidence; three human gates — G2 strategy (new industry only), G5 reject list (manager), G7 final set (partner).
+Self-learning
+Every correction from a manager or partner becomes a rule in the Lessons Register, which the agent reads before each run (§10).
+Hand-off
+Manifest + files → TAIGA Document Enabler → TAIGA benchmarking study → PLI, range, Local File.
+
+Licence gate (read first).  Capitaline does not publish its subscriber terms, and the ICAI-scheme Capitaline TP online licence is sold per member. Before go-live, obtain written confirmation from C-MOTS that agent-operated, human-paced browsing on SBC's licensed seat for SBC's own client engagements is permitted, and that storing client-specific search outputs in SBC's own SharePoint and TAIGA is within the licence. Do not let TAIGA re-sell or white-label Capitaline-sourced data to third-party firms without a redistribution licence. §11 covers the full position.
+
+2. Sources analysed
+#
+Source
+What it contributes
+V1
+ICAI Bengaluru Branch of SIRC — "Practical approach to conducting Transfer Pricing search on Capitaline database" (YouTube MkvRPMzsg6I)
+Practitioner walkthrough of the Capitaline TP search. The video page and captions were not readable from this workspace; its content was reconstructed from the C-MOTS / ICAI session materials below, which cover the same screens. Re-verify on the System 3 desktop once linked (G1 learning run).
+V2
+Tax Gate — "Transfer pricing | benchmarking analysis and process explained" (YouTube Q5XtnrUoRLI)
+Generic benchmarking sequence: FAR → method → PLI → database → quantitative and qualitative filters → accept/reject matrix → range. Same reading limitation as V1.
+S1
+C-MOTS "Presentation of Capitaline for Transfer Pricing" (WIRC-ICAI, 2013; Mulund CPE study circle)
+Five modules (Company, Industry, House, Peer-Set, Screener); Screener fields ITC code, HS product name, NIC activity, NIC code, segment, industry, business activity; the "Simple Method followed by TP Users".
+S2
+Capitaline Plus user guide (IIM-A library)
+Screener mechanics: Domain, Filters, Tables, Fields, Criteria, Year Selection, Run Query, Parse, Show sql, Save (CSV), Export (Excel/Word), Show Criteria Values, Formula; Company module tree (General, Products, Finance, Reports…).
+S3
+Capitaline TP portal (transferpricer.com) listing
+314 industries, 83 sectors, segments, BS abstract, multiple NIC activities, NIC code, finished products / product code; filters on forex, R&D and related-party transactions; in-built TP report.
+S4
+Taxmann session deck "How to use TP databases"; BCAJ "TP Databases – requirement, usage and review"; ICAI study material ch. 24
+Threshold conventions (sales > ₹1 cr, positive net worth, RPT < 25%, service income > 75%), accept/reject matrix, Rule 10D documentation expectation, pitfalls.
+S5
+SBC internal — TAIGA Document Enabler skill, BM Factory decisions, SharePoint BM folder convention
+Downstream hand-off, tenant worker, folder taxonomy.
+
+3. Architecture — mobile to TAIGA
+Partner (mobile / iPad):  "CAP | FY 2025-26 | Industry: ITeS | Product: medical transcription"   |   vBM AGENTS chat (linked)  --->  System 3 desktop: Claude app + Claude in Chrome + Capitaline seat   |  (fallback: BM Factory/_jobs/inbox)        |   |                                            v   |                         Chrome downloads -> C:\BM-Factory\_landing (OneDrive-synced)   |                                            |  Cap-Watcher.ps1: rename, sha256, file   |                                            v   |                SharePoint: <Client>/FY 2025-26/.../BM Backup/Capitaline/<RunID> + _manifest.json   |                                            |   |                                            v   +-- approvals -->   TAIGA Document Enabler -> TAIGA benchmarking study -> PLI, range, Local File / 3CEB
+Route
+How a command reaches System 3
+When to use
+A — Linked chat (primary)
+The BM AGENTS chat is opened once on the System 3 desktop so the chat is linked to that computer. Commands typed into the same chat from mobile or iPad execute on that desktop's Chrome.
+Day one. Desktop must be on, Claude desktop app open, Chrome running.
+B — Queue + scheduled task
+Command arrives as a Teams post / mail to tpteam@ with subject "CAP:" or as a JSON in BM Factory/_jobs/inbox. A scheduled task bound to System 3 polls the queue and runs it.
+Unattended, overnight and batch runs (e.g. ten industries for the season).
+C — Command Centre button
+Firm OS / JARVIS page writes the job JSON into the same inbox.
+After the Command Centre upgrade.
+
+4. Command grammar (what the partner types)
+CAP | FY 2025-26 | Industry: <text or NIC> | Product: <one or more, ; separated> [| Client: <name>] [| PLI: OP/OC]     [| TP sales: <₹ cr>] [| Tested party: service/manufacturer/distributor] [| Mode: run|strategy-only|refresh]ExamplesCAP | FY 2025-26 | Industry: software development | Product: application development; IT consultingCAP | FY 2025-26 | Industry: pharmaceutical formulations | Product: tablets; capsules | Client: KRKA | PLI: OP/OR | Tested party: distributorCAP | FY 2025-26 | NIC 6201 | Product: SaaS | Mode: strategy-only
+Field
+Default if omitted
+Agent behaviour
+FY
+Current compliance FY (2025-26)
+Maps to Capitaline year-end codes 202603, 202503, 202403 (current + two preceding).
+Industry
+Required
+Resolved to NIC-2008 class / group / division and Capitaline industry names via the NIC map (Lessons Register keeps confirmed mappings).
+Product
+Required
+Expanded to synonyms, ITC-HS codes and raw-material terms.
+Client
+"Industry library" run
+Without a client, output files go to the firm-level BM Factory library only.
+PLI
+Services OP/OC; distributor OP/OR or GP/Sales; manufacturer OP/OC
+Recorded in the command file; user override wins.
+TP sales
+Not applied
+If given, turnover band = 0.1× to 10× of tested party sales; otherwise ₹1 cr – ₹200 cr default band, flagged for G5.
+Mode
+run
+strategy-only stops at G2; refresh re-runs a prior RunID on the latest year (assessment update).
+
+5. Legal framework the agent enforces
+Provision
+Requirement
+How the SOP implements it
+s.92C(1)–(2)
+ALP by most appropriate method; where more than one price, range / arithmetic mean per rules.
+PLI and method fixed at G0, locked at G2; range computed at G6.
+Rule 10B(1)(e)
+TNMM: net profit margin relative to costs, sales or assets of comparable uncontrolled transactions.
+Operating PLI built from Capitaline P&L fields; non-operating items stripped (§7.6).
+Rule 10B(2)–(3)
+Comparability: specific characteristics, FAR, contractual terms, market conditions; reasonably accurate adjustments.
+Qualitative screen (G5) tests FAR and business profile from annual reports; adjustments logged.
+Rule 10B(4) and proviso
+Data of the FY of the transaction; earlier two years admissible where they reveal facts with influence on pricing.
+Year codes 202603 / 202503 / 202403 pulled; year-wise availability recorded per company.
+Rule 10C
+Most appropriate method considering nature of transaction, functions, data availability and reliability.
+Method rationale cell in the command record; agent rejects mismatched PLI (e.g. GP for a service provider) at G0.
+Rule 10CA(2)–(3)
+Multiple-year data: weighted average of current and up to two preceding years; if current-year data unavailable at the 3CEB due date, the two preceding years.
+Weighted-average PLI in Cap-Matrix; "refresh" mode re-runs when current-year data becomes available during assessment.
+Rule 10CA(4)–(6)
+Range 35th–65th percentile when dataset has six or more entries; percentile position rules; median when outside.
+Exact percentile-position formulas in Cap-Matrix (not Excel PERCENTILE).
+Rule 10CA(7) + s.92C(2) proviso
+Fewer than six entries: arithmetic mean with tolerance (3%; 1% for wholesale traders as notified).
+Mean + tolerance band computed automatically; tolerance % configurable.
+Rule 10D(1)(g)–(m), 10D(3)
+Record of comparables, comparability analysis, methods considered, workings, assumptions and adjustments, with supporting published data.
+Evidence log, Show-sql captures, waterfall, accept/reject matrix, annual-report extracts stored per RunID (§8).
+Income-tax Act 2025
+Applies from tax year 2026-27; TP provisions carried into the new Act and Rules 2026.
+Agent writes the 1961 references for FY 2025-26 and the 2025-Act section map (from the SBC APA alert library) for tax year 2026-27 runs.
+
+Case law. Judicial guard-rails encoded as reject-rule checks (cite only after tp-caselaw-engine pinpoint verification):
+Functional comparability over label — Rampgreen Solutions (P) Ltd v CIT (Delhi HC, 2015): KPO / BPO and functionally different entities are excluded; the agent never accepts on NIC code alone.
+High profit alone is no ground to reject — Chryscapital Investment Advisors (India) (P) Ltd v DCIT (Delhi HC, 2015): super-normal margin triggers a check for abnormal circumstances, not automatic rejection.
+Taxpayer may exclude its own wrongly-included comparables — Quark Systems (P) Ltd v DCIT (ITAT Chandigarh SB, 2009): the agent keeps prior-year sets under review rather than locked.
+Consistent filters, no cherry-picking — the same quantitative thresholds apply to every company in a run; any one-off exclusion needs a reason code plus partner note.
+6. The gated workflow (G0 – G8)
+Gate
+Name
+Pass criteria (machine-checked)
+Human approval
+Evidence written
+G0
+Command intake
+FY, industry, product parsed; PLI valid for tested-party type; RunID issued.
+—
+00-Command/command.json
+G1
+Environment & licence
+System 3 alive; Capitaline session valid; download path = _landing; watcher heartbeat < 5 min; licence-gate flag = confirmed.
+Only if login needs OTP / CAPTCHA
+99-Logs/env-check.json, screenshot
+G2
+Search strategy lock
+Layer list L1–L8 with codes, keywords, year codes; Parse OK on every query.
+Manager (Sudheer) for a new industry; auto for industries in the library
+01-Search-Strategy/strategy.json, Show-sql text per layer
+G3
+Universe extraction
+Every layer run; CSV + Excel saved; counts reconciled (union = distinct codes); no layer silently empty.
+—
+02-Raw-Dumps/L*.csv/.xls, counts.json
+G4
+Quantitative screen
+Waterfall complete; each step count logged; thresholds = command / defaults.
+—
+03-Financials/*.xls, 06-Workings/waterfall
+G5
+Qualitative screen
+Every survivor reviewed on ≥ 3 sources (Background, Directors' Report / MD&A, Notes / RPT, segment, website); reason code per reject.
+Manager approves reject list (mandatory)
+05-Annual-Reports/*, AR-Matrix
+G6
+PLI & range
+Weighted-average PLI per comparable; Rule 10CA range or mean ± tolerance; tested-party position.
+—
+06-Workings/Cap-Matrix.xlsx
+G7
+Package & file
+Annexures generated; manifest with sha256; all files on SharePoint; TAIGA job written.
+Partner signs final set before Local File
+07-Annexures/*.docx, _manifest.json
+G8
+Close & learn
+Run record written; one digest sent; corrections captured into the Lessons Register.
+—
+99-Logs/run-record.json, lessons delta
+
+Approvals. Approval codes (reply from mobile in the BM AGENTS chat or Teams): APPROVE <RunID> G2 · APPROVE <RunID> G5 · APPROVE <RunID> G7 · REWORK <RunID> G5 "<instruction>" · HOLD <RunID>. A REWORK instruction is applied, re-gated and also written to the Lessons Register.
+7. Step-by-step procedure (agent run sheet)
+7.1  G0 — Parse and plan
+Read the Lessons Register and the industry library index first; reuse a confirmed strategy for the same NIC + product if it exists.
+Resolve industry → NIC-2008 (section / division / group / class / sub-class), Capitaline industry name(s), sector; product → synonyms, ITC-HS 4/6/8-digit codes, raw-material terms.
+Issue RunID = CAP-<FY>-<client-slug | LIB>-<YYYYMMDD>-<nn>. Write command.json. Post "Run started" in the chat (one line).
+7.2  G1 — Environment and session
+tabs_context → open a new Capitaline tab (never reuse the partner's tabs). Confirm the logged-in banner, subscription name and data date on the home screen; screenshot.
+If logged out: use the saved Chrome profile credential only (the agent never types or stores a password from chat). OTP / CAPTCHA → message Revanth "System 3 login needs you" and pause the run with a resume code.
+Check the watcher heartbeat file in BM Factory/_status; if stale, alert IT and switch to the manual-capture fallback (§9, F7).
+7.3  G2 — Build the eight-layer strategy (Screener)
+Layer
+Capitaline field (Screener → Filter → Table → Field)
+Query pattern
+L1
+NIC Code (company classification)
+Exact class(es) e.g. 6201, 6202; then parent group 620 as widening pass
+L2
+NIC Activity (text)
+like "%software%" etc. for each synonym
+L3
+Industry / Sector (Capitaline's 314 industries / 83 sectors)
+Mapped industry names
+L4
+Finished Product Code (ITC-HS)
+Product codes at 4- and 6-digit level
+L5
+Finished Product name
+like "%<product>%" for each synonym
+L6
+Raw Materials name / code
+Inputs characteristic of the product (manufacturers only)
+L7
+Segment Finance — segment name
+like "%<activity>%" to catch diversified companies with a comparable segment
+L8
+Background / business-activity text (Company → General)
+Keyword sweep for misclassified companies
+
+For each layer: Screener → Domain = All companies (standalone) → move to the right box → Filter → table → field → criteria (use Show Criteria Values to pick valid values, never free-type a code) → Year Selection = year-end ≥ 202403 and ≤ 202603 → Parse → Show sql (copy SQL into strategy.json) → Run Query.
+Combinations: L1∪L2∪L3 as the classification universe; L4∪L5∪L6 as the product universe; L7 and L8 as catch-nets. Each layer is also run alone so counts are attributable.
+G2 auto-passes when the NIC + product key already exists in the industry library with a manager-approved strategy; otherwise post the strategy card for APPROVE.
+7.4  G3 — Extract the universe
+On each output screen: Save (CSV) and Export → MS-Excel; filenames are set by the watcher to <RunID>_L<n>_<field>_<seq>.<ext>.
+If export is disabled or blocked: read the result grid with read_page, write it into the evidence log as a table, and capture screenshots (fallback F3).
+Build the union on Capitaline company code (fallback: normalised name + CIN). Reconcile: Σ layer counts ≥ union count; union count = distinct codes. Any layer with 0 rows → widen once (parent NIC / synonym) and log why.
+Size guard: union > 1,500 → add the NIC-class intersection; < 15 → add widening passes before moving on.
+Create a Peer Set named <RunID>-UNIVERSE from the union (lets the financial pull run in one Screener domain).
+7.5  G4 — Quantitative screens (waterfall)
+Domain = the Peer Set. Pull, for 202403–202603: Sales, Other income, Total income, Raw material, Employee cost, Other expenses, PBDIT, Depreciation, PBIT, Interest, PBT, Exceptional items, Net worth, Export earnings, Forex earnings/outgo, R&D, Related-party sales / purchases / services. Export each table. Then apply, logging in/out at every step:
+#
+Filter
+Default threshold (override in command)
+Reason code
+Q1
+Data availability
+Financials for the current FY (or two preceding years per Rule 10CA(3) at 3CEB stage)
+R09
+Q2
+Financial year-end
+31 March, 12-month accounts
+R09
+Q3
+Turnover
+0.1×–10× tested party sales; else ₹1 cr – ₹200 cr
+R11
+Q4
+Net worth
+Positive in each year
+R12
+Q5
+Persistent losses
+Operating loss in 2 of 3 years → reject (unless tested party is loss-making)
+R03
+Q6
+Related-party transactions
+RPT (sales + purchases + services, transaction value not year-end balances) ÷ operating revenue ≤ 25%
+R02
+Q7
+Service / operating income
+≥ 75% of revenue from the comparable activity (services)
+R08
+Q8
+Employee cost
+≥ 25% of total cost (services)
+R08
+Q9
+Export earnings
+≥ 75% where tested party is export-oriented (optional)
+R13
+Q10
+Government / co-operative
+Exclude government companies and co-operatives
+R06
+Q11
+Exceptional year
+Merger, demerger, restructuring, liquidation flags in the year
+R04 / R10
+
+7.6  G5 — Qualitative screen (per surviving company)
+Company module: Background → Directors' Report → Management Discussion → Notes to Accounts → Related Party Transaction / Relationship → Segment Finance → Products (Finished Goods, Raw Materials) → Digital Reports (annual report PDF where available). Save the extract pages / PDFs to 05-Annual-Reports.
+Company website check (WebFetch from the workspace, not the Capitaline seat) for current business description.
+Decide Accept / Reject with one primary reason code (R01–R14) plus a one-line rationale quoting the source, and the evidence link.
+Operating-margin hygiene: exclude interest, dividend, profit on sale of assets, provisions written back, forex (unless operating), extraordinary and prior-period items; record each adjustment.
+Post the G5 card: counts, accept list, reject list by reason, borderline list. Manager APPROVE or REWORK.
+Code
+Reject reason
+Code
+Reject reason
+R01
+Functionally different (FAR / business profile)
+R08
+Diversified; comparable segment < 75% or segment data unavailable
+R02
+RPT above threshold
+R09
+Data unavailable / non-March or non-12-month year
+R03
+Persistent operating losses
+R10
+Under liquidation / CIRP / striking off
+R04
+Extraordinary event (merger, restructuring)
+R11
+Outside turnover band
+R05
+Significant intangibles / brand / R&D owner (tested party is routine)
+R12
+Negative net worth
+R06
+Government / co-operative
+R13
+Export filter fail
+R07
+Abnormal margin with identified abnormal circumstances
+R14
+Duplicate / subsidiary of a selected comparable
+
+7.7  G6 — PLI and arm's length range
+Cap-Matrix.xlsx computes year-wise and weighted-average PLI (Σ numerator ÷ Σ denominator across available years, Rule 10CA(2)).
+n ≥ 6: 35th / median / 65th by Rule 10CA position rule (position = n × p; integer → mean of that and next value; otherwise next higher). n < 6: arithmetic mean ± tolerance.
+Tested-party PLI entered or pulled from TAIGA; status = within / below / above range, with the adjustment that would follow.
+7.8  G7 — Package, file and hand off
+Generate annexures: A — search process (layers, SQL, counts, waterfall); B — accept/reject matrix; C — financials of accepted comparables; D — business descriptions. Word + Excel.
+Watcher writes _manifest.json (file, layer, sha256, size, time, SharePoint URL). Agent verifies every file listed in the evidence log is in the manifest.
+Write the Document Enabler job (jobs/<RunID>.json) naming the TAIGA engagement, study name "Capitaline · <industry> · FY25-26", PLI and file list. Partner APPROVE G7 before TAIGA Local File generation.
+7.9  G8 — Close
+One digest to the partner (RunID, counts funnel, range, approvals pending, links). No other mail.
+Run record + metrics (duration, retries, fallbacks used, human touches) to 99-Logs; lessons delta to the Lessons Register; industry library updated when G5 and G7 approvals exist.
+8. Data storage, naming and evidence
+SteadFast/Clients/<Client>/FY 2025-26/TP Documentation/03 TAIGA & Workings/BM Backup/Capitaline/<RunID>/  00-Command/          command.json, approvals.json  01-Search-Strategy/  strategy.json (layers, codes, SQL text), strategy-card.pdf  02-Raw-Dumps/        <RunID>_L1_NICCode_001.csv / .xls … (untouched database outputs)  03-Financials/       peer-set financial tables, year-wise  04-Screens-Evidence/ screenshots and GIFs per step (time-stamped)  05-Annual-Reports/   extracts and PDFs per comparable  06-Workings/         Cap-Matrix.xlsx (waterfall, AR matrix, PLI, range)  07-Annexures/        Annex-A..D (.docx/.xlsx) ready for the Local File  99-Logs/             env-check, evidence-log.csv, run-record.json  _manifest.jsonSteadFast/BM Factory/  (firm-level)  _jobs/inbox | running | done     command queue (Route B)  _status/heartbeat-sys3.json      watcher + agent liveness  Library/Capitaline/<FY>/<NIC>-<industry>/<RunID>   reusable industry searches (client-neutral copies)  Lessons/Lessons-Register.xlsx    self-learning rules (§10)
+Evidence rule. Every action the agent takes writes one row to evidence-log.csv: time · gate · step · screen · action · result count · file produced · screenshot id · SharePoint URL. Raw dumps are never edited; all transformations happen in Workings so a TPO can trace any number back to the database export.
+9. Self-correction ladder (never stop at a blocker)
+Order of response to any failure: detect → classify → retry once → alternate route → degrade gracefully (keep evidence) → escalate with the fix already proposed. The agent states what failed and what it did instead; it does not hide a failure.
+#
+Failure
+Detection
+Self-correction
+Escalate to
+F1
+Session expired / logged out
+Login page in tab
+Re-login from saved Chrome credential; resume at last logged step
+Revanth if OTP / CAPTCHA
+F2
+Layer returns 0 rows
+Count = 0
+Widen: parent NIC, synonym list, Show Criteria Values lookup; log
+Manager at G2 if still 0
+F3
+Export button blocked / file not produced
+No new file in _landing in 60 s
+Right-click export; Save CSV; else read_page grid → evidence log + screenshots
+IT if downloads blocked by policy
+F4
+Screen layout changed
+Expected label not found
+find by text / vision; update selector note in Lessons Register
+Agent harness review
+F5
+Too many rows (> 1,500)
+Count check
+Intersect with NIC class; split by year; paginate
+—
+F6
+Concurrent-session kick-out
+Capitaline "already logged in" message
+Pause 10 min, retry once; never force-logout another user
+Revanth (seat discipline)
+F7
+Watcher down / OneDrive not syncing
+Heartbeat stale
+Keep files in _landing, continue; upload < 1 MB evidence via M365 connector; queue the rest
+IT
+F8
+Data inconsistency (sum ≠ total)
+Reconciliation check
+Re-pull that company; flag R09 if persistent
+Manager at G5
+F9
+TAIGA unreachable
+Enabler manifest error
+Files stay on SharePoint (system of record); job re-queued
+EchoTech (Vamshi)
+F10
+Desktop / chat not linked
+No device tools in session
+Queue command in _jobs/inbox; Route B picks it up when System 3 is back
+IT (power, app open)
+
+10. Self-learning harness
+Capture — every REWORK, approval comment, Teams / mail instruction tagged to a RunID becomes a candidate lesson: trigger · rule · scope (all runs / industry / client) · source quote · date · approver.
+Promote — a lesson applies automatically once the partner or the manager who gave it confirms; contradictory lessons are held for the partner.
+Apply — the agent reads the Lessons Register at G0 and states which lessons it applied in the run record.
+Measure — per run: human touches, REWORK count, fallbacks used, time per gate. The SBC Agent Harness evolution agent reviews weekly and proposes SOP / skill edits.
+Version — the SOP and the capitaline-tp-search skill carry a version number; every edit cites the lesson that caused it.
+11. Legal, licence and data-provider position
+Risk
+Position
+Control
+Automated access under the Capitaline licence
+Capitaline's subscriber terms are not public; most database licences bar robots and bulk retrieval and limit use to named users.
+Written C-MOTS confirmation before go-live; human-paced runs (one query at a time, no parallel tabs); SBC-licensed seat only; usage log kept.
+Per-member ICAI-scheme licence
+The discounted ICAI scheme is per member; a firm-wide factory may need a firm / multi-user licence.
+Confirm the licence type and named user; upgrade if needed (likely far below API costs).
+Redistribution through TAIGA
+Storing client-specific search outputs as working papers is normal; pooling them into a vault served to other firms is redistribution.
+TAIGA vault scoped to SBC engagements; white-label partners bring their own database licence.
+Confidentiality
+Client financials and command files are confidential.
+SharePoint permissions on client folders; no client data in prompts beyond what the run needs.
+Evidentiary value
+TPO will test reproducibility.
+SQL text, data date, screenshots and untouched dumps preserved per RunID.
+
+12. Strategic lens — better ways and leverage points
+Lens
+Insight → action
+Hidden assumption
+That the agent must re-run the full universe every time. Leverage: the industry library — 60–70% of SBC runs fall in ~25 NIC families; reuse approved strategies and refresh only the year.
+Opposing view
+A TPO may argue an automated search is unreliable. Counter: the evidence chain is stronger than a manual search (SQL, timestamps, hashes, reason codes).
+Role lens — manager
+The manager's time moves from clicking to judging: only G2 (new industries) and G5.
+Role lens — IT
+One always-on desktop per database. That is the whole infrastructure bill.
+Contrarian takeaway
+The real moat is not the search. It is the Lessons Register and the reason-coded accept/reject history, which compound with every run.
+Reusable model
+The same gate model (G0–G8), folder taxonomy and command grammar apply unchanged to Prowess (System 2), ACE TP (System 4) and TP Catalyst (System 1); only §7.3 changes per database.
+Leverage point
+Cross-database union in TAIGA (Capitaline + Prowess + ACE) on CIN — gives the widest defensible set and catches database-specific misclassification.
+
+Prepared by SBC International Tax Practice — BM Factory. For internal use; not for circulation to database providers or clients without partner approval.
