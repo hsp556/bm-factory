@@ -1,0 +1,347 @@
+{
+  "$defs": {
+    "Command": {
+      "properties": {
+        "client": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Client"
+        },
+        "db": {
+          "title": "Db",
+          "type": "string"
+        },
+        "fy": {
+          "title": "Fy",
+          "type": "string"
+        },
+        "industry": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Industry",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "run",
+            "strategy-only",
+            "refresh"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "nic_codes": {
+          "items": {
+            "pattern": "^[0-9]{2,5}$",
+            "type": "string"
+          },
+          "title": "Nic Codes",
+          "type": "array"
+        },
+        "pli": {
+          "enum": [
+            "OP/OC",
+            "OP/OR",
+            "GP/Sales"
+          ],
+          "title": "Pli",
+          "type": "string"
+        },
+        "products": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Products",
+          "type": "array"
+        },
+        "tested_party": {
+          "enum": [
+            "service",
+            "manufacturer",
+            "distributor"
+          ],
+          "title": "Tested Party",
+          "type": "string"
+        },
+        "tp_sales_cr": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tp Sales Cr"
+        }
+      },
+      "required": [
+        "db",
+        "fy",
+        "industry",
+        "nic_codes",
+        "products",
+        "client",
+        "pli",
+        "tp_sales_cr",
+        "tested_party",
+        "mode"
+      ],
+      "title": "Command",
+      "type": "object"
+    },
+    "FileEntry": {
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "command",
+            "strategy",
+            "raw_dump",
+            "financials",
+            "screenshot",
+            "annual_report",
+            "working",
+            "annexure",
+            "log"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "layer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Layer"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "sharepoint_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sharepoint Url"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "layer",
+        "sha256",
+        "bytes",
+        "sharepoint_url"
+      ],
+      "title": "FileEntry",
+      "type": "object"
+    },
+    "LayerResult": {
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "id": {
+          "enum": [
+            "L1",
+            "L2",
+            "L3",
+            "L4",
+            "L5",
+            "L6",
+            "L7",
+            "L8"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "row_count": {
+          "minimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "sql": {
+          "title": "Sql",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "field",
+        "sql",
+        "row_count"
+      ],
+      "title": "LayerResult",
+      "type": "object"
+    },
+    "SourceInfo": {
+      "properties": {
+        "data_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Data Date"
+        },
+        "database": {
+          "title": "Database",
+          "type": "string"
+        },
+        "year_codes": {
+          "items": {
+            "pattern": "^[0-9]{4}03$",
+            "type": "string"
+          },
+          "title": "Year Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "database",
+        "data_date",
+        "year_codes"
+      ],
+      "title": "SourceInfo",
+      "type": "object"
+    },
+    "Universe": {
+      "properties": {
+        "distinct_companies": {
+          "minimum": 0,
+          "title": "Distinct Companies",
+          "type": "integer"
+        },
+        "peer_set": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Peer Set"
+        }
+      },
+      "required": [
+        "distinct_companies",
+        "peer_set"
+      ],
+      "title": "Universe",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "command": {
+      "$ref": "#/$defs/Command"
+    },
+    "fallbacks_used": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Fallbacks Used",
+      "type": "array"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/FileEntry"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "human_touches": {
+      "minimum": 0,
+      "title": "Human Touches",
+      "type": "integer"
+    },
+    "layers": {
+      "items": {
+        "$ref": "#/$defs/LayerResult"
+      },
+      "title": "Layers",
+      "type": "array"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceInfo"
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "partial",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "universe": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Universe"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "command",
+    "source",
+    "layers",
+    "universe",
+    "files",
+    "status",
+    "fallbacks_used",
+    "human_touches"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}
