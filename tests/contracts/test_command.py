@@ -47,3 +47,131 @@ def test_distributor_default_pli():
 def test_rejects_with_field_named(text, field):
     with pytest.raises(CommandError, match=field):
         parse_command(text, T)
+
+
+# ---- Fix round 1 ----
+from pydantic import ValidationError  # noqa: E402
+
+from bmfactory.contracts.command import Command  # noqa: E402
+
+BASE = dict(db="CAP", fy="2025-26", industry="x", nic_codes=[], products=["y"], client=None,
+            pli="OP/OC", tp_sales_cr=None, tested_party="service", mode="run")
+CMD = "CAP | Industry: x | Product: y"
+
+
+# F1: units touching the digits
+@pytest.mark.parametrize("raw", ["45cr", "₹45cr", "Rs.45", "45 crore", "Rs 45", "45crore", "₹ 45 cr.", "RS45CR"])
+def test_tp_sales_units(raw):
+    assert parse_command(f"{CMD} | TP sales: {raw}", T).tp_sales_cr == 45.0
+
+
+# F2: free-text length, product count and control/format characters
+@pytest.mark.parametrize("text,field", [
+    (f"CAP | Industry: {'x' * 201} | Product: y", "industry"),
+    (f"{CMD}; {'z' * 201}", "product"),
+    ("CAP | Industry: x | Product: " + "; ".join(f"p{i}" for i in range(21)), "product"),
+    (f"{CMD} | Client: {'c' * 201}", "client"),
+    ("CAP | Industry: a\nb | Product: y", "industry"),
+    ("CAP | Industry: a\rb | Product: y", "industry"),
+    ("CAP | Industry: x | Product: a\x00b", "product"),
+    ("CAP | Industry: x | Product: a\x1b[31mb", "product"),
+    (f"{CMD} | Client: KR‮KA", "client"),
+    ("CAP | Industry: x | Product: a​b", "product"),
+])
+def test_rejects_unsafe_free_text(text, field):
+    with pytest.raises(CommandError, match=field):
+        parse_command(text, T)
+
+
+def test_accepts_limits():
+    products = "; ".join(f"p{i}" for i in range(20))
+    c = parse_command(f"CAP | Industry: {'x' * 200} | Product: {products} | Client: {'c' * 200}", T)
+    assert (len(c.industry), len(c.products), len(c.client)) == (200, 20, 200)
+
+
+# F3: ASCII-only NIC digits
+def test_non_ascii_nic_segment_rejected():
+    with pytest.raises(CommandError, match="segment"):
+        parse_command("CAP | NIC ٦٢٠١ | Product: y", T)
+
+
+def test_non_ascii_nic_industry_has_no_codes():
+    assert parse_command("CAP | Industry: NIC ٦٢٠١ | Product: y", T).nic_codes == []
+
+
+# F2/F3/F5: invariants hold on the model itself (Command(...) and model_validate)
+def test_model_accepts_base():
+    assert Command(**BASE).db == "CAP"
+
+
+@pytest.mark.parametrize("override", [
+    {"tested_party": "service", "pli": "GP/Sales"},
+    {"db": "XYZ"},
+    {"db": "cap"},
+    {"fy": "FY 2025-26"},
+    {"fy": "2025-2026"},
+    {"fy": "25-26"},
+    {"fy": "2025-27"},
+    {"tp_sales_cr": 0},
+    {"tp_sales_cr": -1.0},
+    {"tp_sales_cr": float("inf")},
+    {"tp_sales_cr": float("nan")},
+    {"nic_codes": ["٦٢٠١"]},
+    {"nic_codes": ["6201\n"]},
+    {"nic_codes": ["1"]},
+    {"industry": "a\nb"},
+    {"industry": "x" * 201},
+    {"products": ["a​b"]},
+    {"products": [f"p{i}" for i in range(21)]},
+    {"products": []},
+    {"client": "KR‮KA"},
+])
+@pytest.mark.parametrize("build", [lambda d: Command(**d), Command.model_validate])
+def test_model_rejects(override, build):
+    with pytest.raises(ValidationError):
+        build({**BASE, **override})
+
+
+def test_model_allows_gp_sales_for_distributor():
+    assert Command(**{**BASE, "tested_party": "distributor", "pli": "GP/Sales"}).pli == "GP/Sales"
+
+
+# Also-do: error echo is repr'd and truncated; strict TP sales number; untested extra checks
+def test_unknown_key_echo_is_repr_and_truncated():
+    with pytest.raises(CommandError) as e:
+        parse_command(f"{CMD} | {'k' * 100}: v", T)
+    msg = str(e.value)
+    assert "'kkkk" in msg and "k" * 51 not in msg
+
+
+def test_unrecognised_segment_echo_truncated():
+    with pytest.raises(CommandError) as e:
+        parse_command(f"{CMD} | {'s' * 100}", T)
+    assert "s" * 51 not in str(e.value)
+
+
+@pytest.mark.parametrize("text,field", [
+    (f"{CMD} | Industry: z", "industry"),                 # duplicate key
+    (f"{CMD} | Client:", "client"),                       # empty value
+    (f"{CMD} | hello", "segment"),                        # colon-less segment
+    (f"{CMD} | TP sales: inf", "tp sales"),
+    (f"{CMD} | TP sales: nan", "tp sales"),
+    (f"{CMD} | TP sales: 4_5", "tp sales"),
+    (f"{CMD} | TP sales: ٤٥", "tp sales"),
+    (f"{CMD} | TP sales: 1e3", "tp sales"),
+    (f"{CMD} | Mode: dryrun", "mode"),
+    (f"{CMD} | Tested party: trader", "tested party"),
+    (f"{CMD} | FY: 2025-27", "fy"),
+])
+def test_rejects_extra_checks(text, field):
+    with pytest.raises(CommandError, match=field):
+        parse_command(text, T)
+
+
+def test_fy_key():
+    assert parse_command(f"{CMD} | FY: 24-25", T).fy == "2024-25"
+
+
+def test_industry_nic_value():
+    c = parse_command("CAP | Industry: NIC 6201 | Product: y", T)
+    assert (c.industry, c.nic_codes) == ("NIC 6201", ["6201"])

@@ -43,3 +43,20 @@ def test_parse_run_id_rejects(bad):
 @pytest.mark.parametrize("db,seq", [("XYZ", 1), ("CAP", 0), ("CAP", 100)])
 def test_make_run_id_rejects(db, seq):
     with pytest.raises(ValueError): make_run_id(db, "2025-26", None, date(2026,11,14), seq)
+
+# Fix round 1 (F4): no trailing-newline or non-ASCII-digit leaks into RunIDs
+def test_make_run_id_rejects_slug_with_trailing_newline():
+    with pytest.raises(ValueError): make_run_id("CAP", "2025-26", "abc\n", date(2026,11,14), 1)
+
+@pytest.mark.parametrize("bad", [
+    "CAP-FY2526-LIB-20261114-01\n",
+    "CAP-FY2526-abc\n-20261114-01",
+    "CAP-FY2526-LIB-٢٠٢٦١١١٤-01",
+    "CAP-FY٢٥٢٦-LIB-20261114-01",
+])
+def test_parse_run_id_rejects_newline_and_non_ascii_digits(bad):
+    with pytest.raises(ValueError): parse_run_id(bad)
+
+@pytest.mark.parametrize("bad", ["٢٥-٢٦", "2025-26\n-"])
+def test_normalise_fy_rejects_non_ascii_digits(bad):
+    with pytest.raises(ValueError): normalise_fy(bad)
